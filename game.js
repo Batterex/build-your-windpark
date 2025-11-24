@@ -90,7 +90,7 @@ function handleCanvasClick(e) {
   if (!inBounds(x, y)) return;
 
   const cell = grid[y][x];
-  if (cell.type !== "empty") return; // ya ocupado
+  if (cell.type !== "empty") return;
 
   const cost = getAssetCost(selectedAsset);
   if (player.points < cost) {
@@ -98,10 +98,8 @@ function handleCanvasClick(e) {
     return;
   }
 
-  // Pagar
   player.points -= cost;
 
-  // Colocar
   cell.type = selectedAsset;
   cell.owner = player.id;
 
@@ -109,6 +107,9 @@ function handleCanvasClick(e) {
 
   drawGrid();
   updatePanels();
+
+  // 🔄 Guardar en backend
+  updateCellOnServer(x, y, cell.type, cell.owner);
 }
 
 function drawGrid() {
@@ -244,4 +245,5 @@ function updatePanels() {
   document.getElementById("player-points").textContent =
     player.points.toFixed(0);
 }
+
 
