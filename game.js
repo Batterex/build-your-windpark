@@ -6,7 +6,7 @@ let canvas, ctx;
 let grid = [];
 let selectedAsset = null;
 
-// Estado básico de jugador (luego se ligará al backend)
+// Estado básico de jugador
 let player = {
   id: "local-player",
   name: "Luigi",
@@ -21,12 +21,32 @@ document.addEventListener("DOMContentLoaded", () => {
   canvas = document.getElementById("game-canvas");
   ctx = canvas.getContext("2d");
 
-  initGrid();
-  initUI();
-  drawGrid();
+  // Intentar cargar grid desde backend
+  fetchGridFromServer().then((serverGrid) => {
+    if (serverGrid && Array.isArray(serverGrid) && serverGrid.length === GRID_SIZE) {
+      grid = serverGrid;
+    } else {
+      initGrid();
+    }
 
-  // tick producción cada 5 segundos (versión demo)
-  setInterval(updateProduction, 5000);
+    // Asegurar estructura de cada celda
+    for (let y = 0; y < GRID_SIZE; y++) {
+      for (let x = 0; x < GRID_SIZE; x++) {
+        if (!grid[y][x]) {
+          grid[y][x] = { type: "empty", owner: null, connected: false, distToSub: null };
+        } else {
+          if (grid[y][x].connected === undefined) grid[y][x].connected = false;
+          if (grid[y][x].distToSub === undefined) grid[y][x].distToSub = null;
+        }
+      }
+    }
+
+    initUI();
+    drawGrid();
+
+    // Tick de producción
+    setInterval(updateProduction, 5000);
+  });
 });
 
 function initGrid() {
@@ -34,6 +54,8 @@ function initGrid() {
     Array.from({ length: GRID_SIZE }, () => ({
       type: "empty",
       owner: null,
+      connected: false,
+      distToSub: null,
     }))
   );
 }
@@ -49,7 +71,7 @@ function initUI() {
   // Click en canvas
   canvas.addEventListener("click", handleCanvasClick);
 
-  // Hover info (básico)
+  // Hover info
   const hoverInfo = document.getElementById("hover-info");
   canvas.addEventListener("mousemove", (e) => {
     const { x, y } = getCellFromEvent(e);
@@ -90,7 +112,7 @@ function handleCanvasClick(e) {
   if (!inBounds(x, y)) return;
 
   const cell = grid[y][x];
-  if (cell.type !== "empty") return;
+  if (cell.type !== "empty") return; // ya ocupado
 
   const cost = getAssetCost(selectedAsset);
   if (player.points < cost) {
@@ -98,17 +120,21 @@ function handleCanvasClick(e) {
     return;
   }
 
+  // Pagar
   player.points -= cost;
 
+  // Colocar
   cell.type = selectedAsset;
   cell.owner = player.id;
+  cell.connected = false;
+  cell.distToSub = null;
 
   applyAssetStats(selectedAsset);
 
   drawGrid();
   updatePanels();
 
-  // 🔄 Guardar en backend
+  // Guardar también en backend
   updateCellOnServer(x, y, cell.type, cell.owner);
 }
 
@@ -125,15 +151,17 @@ function drawGrid() {
   }
 }
 
-// Iconos “simples” dibujados con canvas (puedes cambiarlos luego por imágenes)
+// Dibuja iconos
 function drawAsset(type, x, y) {
   const cx = x * CELL_SIZE + CELL_SIZE / 2;
   const cy = y * CELL_SIZE + CELL_SIZE / 2;
+  const cell = grid[y][x];
 
   if (!type || type === "empty") return;
 
   if (type.startsWith("turbine")) {
-    ctx.strokeStyle = "#e5e7eb";
+    // Blanca si conectada, naranja si no
+    ctx.strokeStyle = cell && cell.connected ? "#e5e7eb" : "#f97316";
     ctx.beginPath();
     ctx.moveTo(cx, cy - 7);
     ctx.lineTo(cx, cy + 7);
@@ -197,32 +225,199 @@ function applyAssetStats(type) {
   if (type === "solar") player.windMW += 1; // simplificación
 }
 
-// “Producción” demo
+/**
+ * Calcula distancias desde subestaciones a cables (BFS)
+ * y marca qué turbinas están realmente conectadas.
+ */
+function computeConnectionsAndDistances() {
+  // Reset
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = grid[y][x];
+      if (!cell) continue;
+      cell.connected = false;
+      cell.distToSub = null;
+    }
+  }
+
+  const dist = Array.from({ length: GRID_SIZE }, () =>
+    Array.from({ length: GRID_SIZE }, () => Infinity)
+  );
+
+  const queue = [];
+
+  // Inicializar BFS desde todas las subestaciones
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      if (grid[y][x].type === "substation") {
+        // Desde substation miramos cables adyacentes
+        const dirs = [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ];
+        for (const [dx, dy] of dirs) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (!inBounds(nx, ny)) continue;
+          const ncell = grid[ny][nx];
+          if (!ncell || ncell.type !== "cable") continue;
+          if (dist[ny][nx] > 1) {
+            dist[ny][nx] = 1;
+            queue.push({ x: nx, y: ny });
+          }
+        }
+      }
+    }
+  }
+
+  // BFS sobre cables
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ];
+
+  while (queue.length > 0) {
+    const { x, y } = queue.shift();
+    const d = dist[y][x];
+
+    for (const [dx, dy] of dirs) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!inBounds(nx, ny)) continue;
+      const ncell = grid[ny][nx];
+      if (!ncell || ncell.type !== "cable") continue;
+      if (dist[ny][nx] > d + 1) {
+        dist[ny][nx] = d + 1;
+        queue.push({ x: nx, y: ny });
+      }
+    }
+  }
+
+  // Determinar turbinas conectadas (deben tocar cable con dist válida)
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = grid[y][x];
+      if (!cell || (!cell.type.startsWith("turbine"))) continue;
+
+      let bestDist = Infinity;
+
+      for (const [dx, dy] of dirs) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (!inBounds(nx, ny)) continue;
+        const ncell = grid[ny][nx];
+        if (!ncell || ncell.type !== "cable") continue;
+        if (dist[ny][nx] < bestDist) {
+          bestDist = dist[ny][nx];
+        }
+      }
+
+      if (bestDist < Infinity) {
+        cell.connected = true;
+        cell.distToSub = bestDist; // nº de pixels de cable hasta substation más cercana
+      } else {
+        cell.connected = false;
+        cell.distToSub = null;
+      }
+    }
+  }
+}
+
+// Wake effect: viento de norte a sur (y creciente)
+function computeWakeFactor(x, y) {
+  let upstream = 0;
+  const maxRange = 6;
+
+  for (let dy = 1; dy <= maxRange; dy++) {
+    const ny = y - dy;
+    if (!inBounds(x, ny)) break;
+    const cell = grid[ny][x];
+    if (!cell || !cell.connected) continue;
+    if (cell.type === "turbine_3" || cell.type === "turbine_5") {
+      upstream++;
+    }
+  }
+
+  const factor = 1 - 0.1 * upstream;
+  return Math.max(0.4, factor); // mínimo 40% de eficiencia
+}
+
+function computeCableLossFactor(distToSub) {
+  if (distToSub == null) return 1;
+  const loss = Math.min(0.3, distToSub * 0.005); // 0.5% por pixel, máx 30%
+  return 1 - loss;
+}
+
+// “Producción” demo con lógica conjunta
 function updateProduction() {
+  // 1) Conectividad y distancias
+  computeConnectionsAndDistances();
+
+  // 2) Capacidad de subestación
+  let numSubstations = 0;
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      if (grid[y][x].type === "substation") numSubstations++;
+    }
+  }
+  const substationCapacityMW = numSubstations * 50; // 50 MW por subestación
+
+  // 3) Potencia nominal conectada (MW)
+  let connectedMW = 0;
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = grid[y][x];
+      if (!cell || !cell.connected) continue;
+      if (cell.type === "turbine_3") connectedMW += 3;
+      if (cell.type === "turbine_5") connectedMW += 5;
+    }
+  }
+
+  let capacityFactor = 1;
+  if (substationCapacityMW > 0 && connectedMW > substationCapacityMW) {
+    capacityFactor = substationCapacityMW / connectedMW; // curtailment
+  }
+
+  // 4) Producción
   let base = 0;
 
-  grid.forEach((row) => {
-    row.forEach((cell) => {
-      if (cell.owner === player.id) {
-        if (cell.type === "turbine_3") base += 2;
-        if (cell.type === "turbine_5") base += 4;
-      }
-    });
-  });
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = grid[y][x];
+      if (!cell || cell.owner !== player.id || !cell.connected) continue;
+
+      let basePerTick = 0;
+      if (cell.type === "turbine_3") basePerTick = 2;
+      if (cell.type === "turbine_5") basePerTick = 4;
+      if (!basePerTick) continue;
+
+      const wakeFactor = computeWakeFactor(x, y);
+      const cableFactor = computeCableLossFactor(cell.distToSub);
+
+      const localProd =
+        basePerTick * wakeFactor * cableFactor * capacityFactor;
+
+      base += localProd;
+    }
+  }
 
   // BESS bonus simple
   const bessBonus = player.storageMWh > 0 ? 0.05 : 0;
   const produced = base * (1 + bessBonus);
-  player.energyTodayMWh += produced;
-  player.co2Tons += produced * 0.0003; // inventado
 
-  // dar puntos por energía
+  player.energyTodayMWh += produced;
+  player.co2Tons += produced * 0.0003;
   player.points += Math.round(produced / 2);
+
   updatePanels();
+  drawGrid(); // para repintar turbinas conectadas/desconectadas
 }
 
 function updatePanels() {
-  // Top bar
   document.getElementById("stat-wind").textContent =
     player.windMW.toFixed(0);
   document.getElementById("stat-storage").textContent =
@@ -230,7 +425,6 @@ function updatePanels() {
   document.getElementById("stat-energy").textContent =
     player.energyTodayMWh.toFixed(0);
 
-  // Park stats
   document.getElementById("park-installed").textContent =
     player.windMW.toFixed(0);
   document.getElementById("park-storage").textContent =
@@ -240,10 +434,7 @@ function updatePanels() {
   document.getElementById("park-co2").textContent =
     player.co2Tons.toFixed(2);
 
-  // Player
   document.getElementById("player-name").textContent = player.name;
   document.getElementById("player-points").textContent =
     player.points.toFixed(0);
 }
-
-
