@@ -73,3 +73,18 @@ async function loginUser(email, password) {
   }
 }
 
+// -------------------------------------------
+// Reset completo del grid en el backend
+// -------------------------------------------
+async function resetGridOnServer() {
+  try {
+    const res = await fetch(`${API_BASE}/reset`, {
+      method: "POST"
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error("Error al resetear el grid en backend:", err);
+  }
+}
+
