@@ -79,13 +79,9 @@ canvas.addEventListener("mouseleave", () => {
 // CLICK → abrir tablero 40×40
 canvas.addEventListener("click", (evt) => {
   const { x, y } = getWorldCoords(evt);
-  const cell = world[y][x];
 
-  if (!cell.owner) {
-    alert(`Pixel (${x}, ${y}) está LIBRE.\nPrecio: 0,09 €.\nMás adelante activaremos el sistema Stripe.`);
-    return;
-  }
-
-  // ir al tablero del pixel
+  // MODO DESARROLLO:
+  // cualquier pixel que clicas abre el tablero 40x40
+  // más adelante añadiremos lógica de compra y owner
   window.location.href = `/index.html?tileX=${x}&tileY=${y}`;
 });
