@@ -58,6 +58,18 @@ app.get("/", (req, res) => {
   res.send("Build-Your-Windpark backend is running.");
 });
 
+// Reset completo del grid
+app.post("/api/reset", (req, res) => {
+  grid = Array.from({ length: GRID_SIZE }, () =>
+    Array.from({ length: GRID_SIZE }, () => ({
+      type: "empty",
+      owner: null,
+    }))
+  );
+  res.json({ ok: true });
+});
+
 app.listen(PORT, () => {
   console.log("Backend listening on port", PORT);
 });
+
