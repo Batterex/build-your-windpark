@@ -18,6 +18,14 @@ let player = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Leer parámetros de la URL (tileX, tileY, zone)
+  const params = new URLSearchParams(window.location.search);
+  const tileX = parseInt(params.get("tileX") || "0", 10);
+  const tileY = parseInt(params.get("tileY") || "0", 10);
+  const zone = params.get("zone") || "desconocida";
+
+  console.log("Tablero cargado para pixel:", tileX, tileY, "zona:", zone);
+
   canvas = document.getElementById("game-canvas");
   ctx = canvas.getContext("2d");
 
@@ -493,5 +501,13 @@ function updatePanels() {
   document.getElementById("player-name").textContent = player.name;
   document.getElementById("player-points").textContent =
     player.points.toFixed(0);
-}
+}  // Mostrar zona actual en el panel de jugador (si existe el elemento)
+  const params = new URLSearchParams(window.location.search);
+  const zone = params.get("zone") || "desconocida";
+  const bonusEl = document.getElementById("player-bonus");
+  if (bonusEl) {
+    bonusEl.textContent = "Zona: " + zone;
+  }
+
+
 
