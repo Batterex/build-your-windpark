@@ -5,18 +5,27 @@
   <title>World Map – Build Your Windpark</title>
   <link rel="stylesheet" href="world.css" />
 </head>
+
 <body>
 
-  <h1 class="title">WORLD MAP (BETA PRIVADO)</h1>
-  <p class="subtitle">Selecciona un pixel para abrir su tablero 40×40</p>
+<script>
+  const pass = "LUIGI-PRIVADO";
+  const user = prompt("Introduce la contraseña:");
+  if (user !== pass) {
+    document.body.innerHTML = "<h1 style='color:white'>ACCESO NO AUTORIZADO</h1>";
+  }
+</script>
 
-  <!-- Canvas del mapa del mundo -->
-  <canvas id="world-canvas" width="800" height="800"></canvas>
+<h1 class="title">WORLD MAP (BETA PRIVADO)</h1>
+<p class="subtitle">Selecciona un pixel para abrir su tablero 40×40</p>
 
-  <!-- Cuadro de información -->
-  <div id="world-info" class="info hidden"></div>
+<div id="world-container">
+  <canvas id="world-canvas" width="1000" height="500"></canvas>
+  <!-- tamaño canvas ajustado al mapa -->
+</div>
 
-  <script src="world.js"></script>
+<div id="world-info" class="info hidden"></div>
 
+<script src="world.js"></script>
 </body>
 </html>
