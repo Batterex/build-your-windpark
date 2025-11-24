@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Build-Your-Windpark</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">BUILD-YOUR-WINDPARK</div>
+    <div class="stats">
+      <span>Total Wind Capacity: <span id="stat-wind">0</span> MW</span>
+      <span>Storage Capacity: <span id="stat-storage">0</span> MWh</span>
+      <span>Energy Today: <span id="stat-energy">0</span> MWh</span>
+    </div>
+    <div class="actions">
+      <button id="btn-leaderboard">Leaderboard</button>
+      <button id="btn-login">Login / Signup</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="map-panel">
+      <canvas id="game-canvas" width="800" height="800"></canvas>
+      <div id="hover-info" class="hover-info hidden"></div>
+    </section>
+
+    <aside class="side-panel">
+      <section class="build-panel">
+        <h2>BUILD PANEL</h2>
+        <button class="build-btn" data-asset="turbine_3">
+          <img src="assets/icons/turbine.svg" alt="" />
+          Turbine 3 MW – 50 pts
+        </button>
+        <button class="build-btn" data-asset="turbine_5">
+          <img src="assets/icons/turbine.svg" alt="" />
+          Turbine 5 MW – 80 pts
+        </button>
+        <button class="build-btn" data-asset="bess_10">
+          <img src="assets/icons/bess.svg" alt="" />
+          BESS 10 MWh – 40 pts
+        </button>
+        <button class="build-btn" data-asset="substation">
+          <img src="assets/icons/substation.svg" alt="" />
+          Substation 66/30 kV – 100 pts
+        </button>
+        <button class="build-btn" data-asset="cable">
+          <img src="assets/icons/cable.svg" alt="" />
+          Collector cable – 5 pts
+        </button>
+        <button class="build-btn" data-asset="metmast">
+          <img src="assets/icons/metmast.svg" alt="" />
+          Met Mast – 20 pts
+        </button>
+        <button class="build-btn" data-asset="solar">
+          <img src="assets/icons/solar.svg" alt="" />
+          Solar – 10 pts
+        </button>
+      </section>
+
+      <section class="stats-panel">
+        <h2>PARK STATS</h2>
+        <p>Installed Capacity: <span id="park-installed">0</span> MW</p>
+        <p>Storage Capacity: <span id="park-storage">0</span> MWh</p>
+        <p>Energy Today: <span id="park-energy">0</span> MWh</p>
+        <p>CO₂ Avoided: <span id="park-co2">0</span> t</p>
+      </section>
+
+      <section class="player-panel">
+        <h2>PLAYER STATUS</h2>
+        <p>Name: <span id="player-name">Guest</span></p>
+        <p>Level: <span id="player-level">1 – Junior Engineer</span></p>
+        <p>Points: <span id="player-points">0</span></p>
+        <p>Bonus: <span id="player-bonus">None</span></p>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    Created by Luigi Negro – Wind & Storage Insider
+  </footer>
+
+  <script src="api.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
