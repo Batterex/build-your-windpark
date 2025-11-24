@@ -1,0 +1,41 @@
+body {
+  background: #020617;
+  margin: 0;
+  padding: 20px;
+  color: #e5e7eb;
+  font-family: system-ui, sans-serif;
+  text-align: center;
+}
+
+.title {
+  margin: 5px 0;
+  font-size: 22px;
+}
+
+.subtitle {
+  margin: 0 0 15px 0;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+#world-canvas {
+  border: 1px solid #1f2937;
+  background: #0f172a;
+  image-rendering: pixelated;
+  cursor: pointer;
+}
+
+.info {
+  position: absolute;
+  background: rgba(0,0,0,0.7);
+  padding: 6px 10px;
+  border: 1px solid #475569;
+  font-size: 12px;
+  color: #e2e8f0;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.hidden {
+  display: none;
+}
