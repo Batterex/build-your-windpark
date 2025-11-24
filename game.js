@@ -68,6 +68,31 @@ function initUI() {
     });
   });
 
+    // Botón Reset park
+  const resetBtn = document.getElementById("btn-reset-park");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", async () => {
+      const ok = confirm("¿Seguro que quieres resetear todo el parque?");
+      if (!ok) return;
+
+      // Reset en backend
+      await resetGridOnServer();
+
+      // Reset local del grid
+      initGrid();
+
+      // Reset stats de jugador
+      player.points = 200;
+      player.windMW = 0;
+      player.storageMWh = 0;
+      player.energyTodayMWh = 0;
+      player.co2Tons = 0;
+
+      updatePanels();
+      drawGrid();
+    });
+  }
+  
   // Click en canvas
   canvas.addEventListener("click", handleCanvasClick);
 
@@ -112,6 +137,28 @@ function handleCanvasClick(e) {
   if (!inBounds(x, y)) return;
 
   const cell = grid[y][x];
+
+  // MODO BULLDOZER: borrar lo que haya en la celda
+  if (selectedAsset === "bulldozer") {
+    if (cell.type !== "empty") {
+      // restar estadísticas según lo que quitamos
+      removeAssetStats(cell.type);
+
+      cell.type = "empty";
+      cell.owner = null;
+      cell.connected = false;
+      cell.distToSub = null;
+
+      drawGrid();
+      updatePanels();
+
+      // Guardar en backend (vaciar celda)
+      updateCellOnServer(x, y, "empty", null);
+    }
+    return;
+  }
+
+  // MODO CONSTRUCCIÓN NORMAL
   if (cell.type !== "empty") return; // ya ocupado
 
   const cost = getAssetCost(selectedAsset);
@@ -137,6 +184,7 @@ function handleCanvasClick(e) {
   // Guardar también en backend
   updateCellOnServer(x, y, cell.type, cell.owner);
 }
+
 
 function drawGrid() {
   ctx.fillStyle = "#020617";
@@ -223,6 +271,14 @@ function applyAssetStats(type) {
   if (type === "turbine_5") player.windMW += 5;
   if (type === "bess_10") player.storageMWh += 10;
   if (type === "solar") player.windMW += 1; // simplificación
+}
+
+// Nueva: revertir stats al borrar un asset
+function removeAssetStats(type) {
+  if (type === "turbine_3") player.windMW -= 3;
+  if (type === "turbine_5") player.windMW -= 5;
+  if (type === "bess_10") player.storageMWh -= 10;
+  if (type === "solar") player.windMW -= 1;
 }
 
 /**
@@ -438,3 +494,4 @@ function updatePanels() {
   document.getElementById("player-points").textContent =
     player.points.toFixed(0);
 }
+
