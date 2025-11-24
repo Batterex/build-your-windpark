@@ -3,7 +3,7 @@
 // -------------------------------------------------------------
 
 // Cuando tengas backend en Render, cambiarás esta URL por la tuya:
-const API_BASE = "http://localhost:4000/api";
+const API_BASE = "https://build-your-windpark-backend.onrender.com/api";
 
 // -------------------------------------------
 // Obtener el grid desde el backend (más tarde)
@@ -72,3 +72,4 @@ async function loginUser(email, password) {
     console.error("Error en login:", err);
   }
 }
+
