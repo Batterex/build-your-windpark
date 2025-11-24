@@ -7,32 +7,37 @@ body {
   text-align: center;
 }
 
-.title {
-  margin: 5px 0;
-  font-size: 22px;
-}
-
-.subtitle {
-  margin: 0 0 15px 0;
-  color: #94a3b8;
-  font-size: 14px;
+#world-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
 }
 
 #world-canvas {
-  border: 1px solid #1f2937;
-  background: #0f172a;
-  image-rendering: pixelated;
+  border: 2px solid #1f2937;
   cursor: pointer;
+  image-rendering: pixelated;
+}
+
+.title {
+  font-size: 22px;
+  margin: 0;
+}
+
+.subtitle {
+  margin: 5px 0 15px 0;
+  font-size: 15px;
+  color: #94a3b8;
 }
 
 .info {
   position: absolute;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0,0,0,0.8);
   padding: 6px 10px;
   border: 1px solid #475569;
-  font-size: 12px;
   color: #e2e8f0;
   border-radius: 4px;
+  font-size: 12px;
   pointer-events: none;
 }
 
