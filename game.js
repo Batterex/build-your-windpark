@@ -470,14 +470,18 @@ function updateProduction() {
   // 1) Conectividad y distancias
   computeConnectionsAndDistances();
 
-  // 2) Capacidad de subestación
+  // 2) Capacidad de subestación (dependiente de la zona)
   let numSubstations = 0;
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       if (grid[y][x].type === "substation") numSubstations++;
     }
   }
-  const substationCapacityMW = numSubstations * 50; // 50 MW por subestación
+
+  const profile = ZONE_PROFILES[currentZone] || ZONE_PROFILES.desconocida;
+  const capacityPerSubstation = profile.substationMW; // MW por subestación según zona
+  const substationCapacityMW = numSubstations * capacityPerSubstation;
+
 
   // 3) Potencia nominal conectada (MW)
   let connectedMW = 0;
@@ -557,6 +561,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
