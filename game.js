@@ -65,8 +65,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   const tileX = parseInt(params.get("tileX") || "0", 10);
   const tileY = parseInt(params.get("tileY") || "0", 10);
-  const zone = params.get("zone") || "desconocida";
-
+  currentZone = params.get("zone") || "desconocida";
+  
   console.log("Tablero cargado para pixel:", tileX, tileY, "zona:", zone);
 
   canvas = document.getElementById("game-canvas");
@@ -551,6 +551,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + zone;
   }
+
 
 
 
