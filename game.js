@@ -455,8 +455,14 @@ function computeWakeFactor(x, y) {
 
 function computeCableLossFactor(distToSub) {
   if (distToSub == null) return 1;
-  const loss = Math.min(0.3, distToSub * 0.005); // 0.5% por pixel, máx 30%
-  return 1 - loss;
+
+  const profile = ZONE_PROFILES[currentZone] || ZONE_PROFILES.desconocida;
+
+  const lossPerPixel = profile.cableLossPerPixel;
+  const maxLoss = profile.maxCableLoss;
+
+  const loss = Math.min(maxLoss, distToSub * lossPerPixel);
+  return 1 - loss; // 1 = sin pérdidas, 0 = pérdidas totales
 }
 
 // “Producción” demo con lógica conjunta
@@ -551,6 +557,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
