@@ -549,8 +549,9 @@ function updatePanels() {
   const zone = params.get("zone") || "desconocida";
   const bonusEl = document.getElementById("player-bonus");
   if (bonusEl) {
-    bonusEl.textContent = "Zona: " + zone;
+    bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
