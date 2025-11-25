@@ -515,10 +515,14 @@ function updateProduction() {
       const wakeFactor = computeWakeFactor(x, y);
       const cableFactor = computeCableLossFactor(cell.distToSub);
 
+      const profile = ZONE_PROFILES[currentZone] || ZONE_PROFILES.desconocida;
+      const windFactor = profile.windFactor;
+
       const localProd =
-        basePerTick * wakeFactor * cableFactor * capacityFactor;
+        basePerTick * windFactor * wakeFactor * cableFactor * capacityFactor;
 
       base += localProd;
+
     }
   }
 
@@ -561,6 +565,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
