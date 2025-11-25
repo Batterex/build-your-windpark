@@ -2,6 +2,49 @@
 const GRID_SIZE = 40;
 const CELL_SIZE = 20;
 
+// Perfiles de zona (ajustan viento, capacidad, pérdidas, etc.)
+const ZONE_PROFILES = {
+  polar_norte: {
+    windFactor: 1.2,
+    substationMW: 60,        // MW por subestación
+    cableLossPerPixel: 0.004,
+    maxCableLoss: 0.25
+  },
+  templado_norte: {
+    windFactor: 1.0,
+    substationMW: 50,
+    cableLossPerPixel: 0.005,
+    maxCableLoss: 0.30
+  },
+  tropical: {
+    windFactor: 0.9,
+    substationMW: 45,
+    cableLossPerPixel: 0.006,
+    maxCableLoss: 0.30
+  },
+  templado_sur: {
+    windFactor: 1.0,
+    substationMW: 50,
+    cableLossPerPixel: 0.005,
+    maxCableLoss: 0.30
+  },
+  polar_sur: {
+    windFactor: 1.1,
+    substationMW: 55,
+    cableLossPerPixel: 0.0045,
+    maxCableLoss: 0.25
+  },
+  desconocida: {
+    windFactor: 1.0,
+    substationMW: 50,
+    cableLossPerPixel: 0.005,
+    maxCableLoss: 0.30
+  }
+};
+
+// Zona actual del tablero (se rellena al iniciar)
+let currentZone = "desconocida";
+
 let canvas, ctx;
 let grid = [];
 let selectedAsset = null;
@@ -508,6 +551,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + zone;
   }
+
 
 
 
