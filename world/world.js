@@ -87,7 +87,7 @@ canvas.addEventListener("click", async (evt) => {
   const zone = getZoneFromCoords(x, y);
 
   const ok = confirm(
-    `Pixel (${x}, ${y}) en zona ${zone}.\n\nPrecio: 0,09 €.\n\n¿Quieres ir a pagar con Stripe (modo test)?`
+    `Pixel (${x}, ${y}) en zona ${zone}.\n\nPrecio: 0,59 €.\n\n¿Quieres ir a pagar con Stripe (modo test)?`
   );
   if (!ok) return;
 
