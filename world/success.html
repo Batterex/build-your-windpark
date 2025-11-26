@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pixel comprado – Build Your Windpark</title>
+  <style>
+    body {
+      background: #020617;
+      color: #e5e7eb;
+      font-family: system-ui, sans-serif;
+      padding: 40px;
+      text-align: center;
+    }
+    .box {
+      border: 1px solid #1f2937;
+      padding: 20px;
+      display: inline-block;
+      background: #0f172a;
+    }
+    a {
+      color: #22c55e;
+    }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h1>¡Gracias por tu compra!</h1>
+  <p id="msg">Registrando la compra del pixel...</p>
+  <p><a href="/world/index.html">Volver al mapa del mundo</a></p>
+</div>
+
+<script>
+(async () => {
+  const params = new URLSearchParams(window.location.search);
+  const tileX = parseInt(params.get("tileX") || "0", 10);
+  const tileY = parseInt(params.get("tileY") || "0", 10);
+
+  document.getElementById("msg").textContent =
+    `Pixel (${tileX}, ${tileY}) comprado correctamente.`;
+
+  try {
+    await fetch("https://build-your-windpark-backend.onrender.com/api/world/mark-owned", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tileX,
+        tileY,
+        ownerName: "LUIGI" // temporal hasta tener login
+      })
+    });
+  } catch (err) {
+    console.error("Error al marcar pixel como comprado:", err);
+  }
+})();
+</script>
+
+</body>
+</html>
