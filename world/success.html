@@ -35,9 +35,10 @@
   const params = new URLSearchParams(window.location.search);
   const tileX = parseInt(params.get("tileX") || "0", 10);
   const tileY = parseInt(params.get("tileY") || "0", 10);
+  const zone = params.get("zone") || "desconocida";
 
   document.getElementById("msg").textContent =
-    `Pixel (${tileX}, ${tileY}) comprado correctamente.`;
+    `Pixel (${tileX}, ${tileY}) comprado correctamente. Redirigiendo al tablero...`;
 
   try {
     await fetch("https://build-your-windpark-backend.onrender.com/api/world/mark-owned", {
@@ -46,14 +47,20 @@
       body: JSON.stringify({
         tileX,
         tileY,
-        ownerName: "LUIGI" // temporal hasta tener login
+        ownerName: "LUIGI"
       })
     });
   } catch (err) {
     console.error("Error al marcar pixel como comprado:", err);
   }
+
+  // Espera 1.5s para que el usuario vea el mensaje y redirige al tablero 40×40
+  setTimeout(() => {
+    window.location.href = `/index.html?tileX=${tileX}&tileY=${tileY}&zone=${zone}`;
+  }, 1500);
 })();
 </script>
+
 
 </body>
 </html>
