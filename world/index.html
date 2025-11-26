@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <title>World Map – Build Your Windpark</title>
@@ -9,10 +9,12 @@
 <body>
 
 <script>
-  const pass = "LUIGI-PRIVADO";
-  const user = prompt("Introduce la contraseña:");
-  if (user !== pass) {
-    document.body.innerHTML = "<h1 style='color:white'>ACCESO NO AUTORIZADO</h1>";
+  // Protección sencilla por contraseña
+  const PASS = "LUIGI-PRIVADO";  // cámbiala si quieres
+  const entered = prompt("Introduce la contraseña para acceder al mapa privado:");
+  if (entered !== PASS) {
+    document.body.innerHTML = "<h1 style='color:#e5e7eb; text-align:center; margin-top:60px;'>ACCESO NO AUTORIZADO</h1>";
+    throw new Error("Unauthorized"); // evitamos que se ejecute world.js
   }
 </script>
 
@@ -21,7 +23,6 @@
 
 <div id="world-container">
   <canvas id="world-canvas" width="1000" height="500"></canvas>
-  <!-- tamaño canvas ajustado al mapa -->
 </div>
 
 <div id="world-info" class="info hidden"></div>
