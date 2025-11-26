@@ -190,6 +190,40 @@ function hasNeighborConnection(x, y) {
     [0, -1],
   ];
 
+  function getCableConnections(x, y) {
+  const dirs = {
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+  };
+
+  const candidates = ["cable", "substation", "turbine_3", "turbine_5", "solar"];
+
+  // arriba
+  if (inBounds(x, y - 1)) {
+    const c = grid[y - 1][x];
+    if (c && candidates.includes(c.type)) dirs.up = true;
+  }
+  // abajo
+  if (inBounds(x, y + 1)) {
+    const c = grid[y + 1][x];
+    if (c && candidates.includes(c.type)) dirs.down = true;
+  }
+  // izquierda
+  if (inBounds(x - 1, y)) {
+    const c = grid[y][x - 1];
+    if (c && candidates.includes(c.type)) dirs.left = true;
+  }
+  // derecha
+  if (inBounds(x + 1, y)) {
+    const c = grid[y][x + 1];
+    if (c && candidates.includes(c.type)) dirs.right = true;
+  }
+
+  return dirs;
+}
+
   for (const [dx, dy] of dirs) {
     const nx = x + dx;
     const ny = y + dy;
@@ -747,6 +781,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
