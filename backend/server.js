@@ -98,7 +98,7 @@ app.post("/api/world/create-checkout-session", async (req, res) => {
             product_data: {
               name: `Pixel Energético (${tileX}, ${tileY})`
             },
-            unit_amount: 9 // céntimos = 0,09 €
+            unit_amount: 59 // céntimos = 0,59 €
           },
           quantity: 1
         }
