@@ -182,6 +182,27 @@ function inBounds(x, y) {
   return x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE;
 }
 
+function hasNeighborConnection(x, y) {
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ];
+
+  for (const [dx, dy] of dirs) {
+    const nx = x + dx;
+    const ny = y + dy;
+    if (!inBounds(nx, ny)) continue;
+    const ncell = grid[ny][nx];
+    if (!ncell) continue;
+    if (ncell.type === "cable" || ncell.type === "substation") {
+      return true;
+    }
+  }
+  return false;
+}
+
 function handleCanvasClick(e) {
   if (!selectedAsset) return;
   const { x, y } = getCellFromEvent(e);
@@ -706,6 +727,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
