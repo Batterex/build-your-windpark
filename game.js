@@ -210,25 +210,34 @@ function handleCanvasClick(e) {
 
   const cell = grid[y][x];
 
-  // MODO BULLDOZER: borrar lo que haya en la celda
-  if (selectedAsset === "bulldozer") {
-    if (cell.type !== "empty") {
-      // restar estadísticas según lo que quitamos
-      removeAssetStats(cell.type);
+// MODO BULLDOZER: borrar lo que haya en la celda
+if (selectedAsset === "bulldozer") {
+  if (cell.type !== "empty") {
+    // calcular la devolución (mitad del coste original)
+    const originalCost = getAssetCost(cell.type);
+    const refund = Math.round(originalCost / 2);
 
-      cell.type = "empty";
-      cell.owner = null;
-      cell.connected = false;
-      cell.distToSub = null;
+    // devolver puntos al jugador (hasta máximo 999999 por seguridad, opcional)
+    player.points += refund;
 
-      drawGrid();
-      updatePanels();
+    // restar estadísticas según lo que quitamos
+    removeAssetStats(cell.type);
 
-      // Guardar en backend (vaciar celda)
-      updateCellOnServer(x, y, "empty", null);
-    }
-    return;
+    // vaciar celda
+    cell.type = "empty";
+    cell.owner = null;
+    cell.connected = false;
+    cell.distToSub = null;
+
+    drawGrid();
+    updatePanels();
+
+    // Guardar en backend (vaciar celda)
+    updateCellOnServer(x, y, "empty", null);
   }
+  return;
+}
+
 
   // MODO CONSTRUCCIÓN NORMAL
   if (cell.type !== "empty") return; // ya ocupado
@@ -738,6 +747,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
