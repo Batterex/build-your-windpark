@@ -15,6 +15,8 @@ mapImage.src = "assets/worldmap.png";
 // Matriz del mundo (por ahora sólo seed y producción)
 // Más adelante aquí guardaremos owner, logo, etc.
 let world = [];
+let purchasedTiles = {}; // { "x,y": { owner: "..." } }
+
 
 for (let y = 0; y < WORLD_SIZE; y++) {
   let row = [];
@@ -29,9 +31,54 @@ for (let y = 0; y < WORLD_SIZE; y++) {
 }
 
 // Cuando se cargue la imagen, la pintamos centrada
-mapImage.onload = function () {
+mapImage.onload = async function () {
   ctx.drawImage(mapImage, 0, 0, canvas.width, canvas.height);
+
+  // Cargar píxeles comprados desde el backend
+  await loadPurchasedTiles();
+  drawPurchasedOverlay();
 };
+async function loadPurchasedTiles() {
+  try {
+    const res = await fetch("https://build-your-windpark-backend.onrender.com/api/world/purchased");
+    purchasedTiles = await res.json();
+
+    // actualizar owners en la matriz world
+    for (const key in purchasedTiles) {
+      const [xStr, yStr] = key.split(",");
+      const x = parseInt(xStr, 10);
+      const y = parseInt(yStr, 10);
+      if (x >= 0 && x < WORLD_SIZE && y >= 0 && y < WORLD_SIZE) {
+        world[y][x].owner = purchasedTiles[key].owner;
+      }
+    }
+  } catch (err) {
+    console.error("Error cargando tiles comprados:", err);
+  }
+}
+
+function drawPurchasedOverlay() {
+  const tileWidth = canvas.width / WORLD_SIZE;
+  const tileHeight = canvas.height / (WORLD_SIZE / 2); // porque usamos 1000x500
+
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = "#22c55e"; // verde para píxel comprado
+
+  for (const key in purchasedTiles) {
+    const [xStr, yStr] = key.split(",");
+    const x = parseInt(xStr, 10);
+    const y = parseInt(yStr, 10);
+
+    const px = x * tileWidth;
+    const py = y * tileHeight;
+
+    ctx.fillRect(px, py, tileWidth, tileHeight);
+  }
+
+  ctx.restore();
+}
+
 
 // Convertir clic en coordenadas del grid 1000x1000
 function getWorldCoords(evt) {
