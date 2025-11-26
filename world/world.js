@@ -87,7 +87,7 @@ canvas.addEventListener("click", async (evt) => {
   const zone = getZoneFromCoords(x, y);
 
   const ok = confirm(
-    `Pixel (${x}, ${y}) en zona ${zone}.\n\nPrecio: 0,59 €.\n\n¿Quieres ir a pagar con Stripe (modo test)?`
+    `Pixel (${x}, ${y}) en zona ${zone}.\n\nPrecio: 0,50 €.\n\n¿Quieres ir a pagar con Stripe (modo test)?`
   );
   if (!ok) return;
 
@@ -95,12 +95,11 @@ canvas.addEventListener("click", async (evt) => {
     const res = await fetch("https://build-your-windpark-backend.onrender.com/api/world/create-checkout-session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tileX: x, tileY: y })
+      body: JSON.stringify({ tileX: x, tileY: y, zone })   // 👈 AÑADIMOS zone
     });
 
     const data = await res.json();
     if (data.url) {
-      // redirigir a Stripe Checkout
       window.location.href = data.url;
     } else {
       alert("No se pudo crear la sesión de pago.");
