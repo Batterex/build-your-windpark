@@ -190,7 +190,7 @@ function hasNeighborConnection(x, y) {
     [0, -1],
   ];
 
-  function getCableConnections(x, y) {
+function getCableConnections(x, y) {
   const dirs = {
     up: false,
     down: false,
@@ -198,6 +198,8 @@ function hasNeighborConnection(x, y) {
     right: false,
   };
 
+  // Consideramos que un cable "se conecta" también a substations y generadores,
+  // para que la forma visual llegue hasta ellos.
   const candidates = ["cable", "substation", "turbine_3", "turbine_5", "solar"];
 
   // arriba
@@ -809,6 +811,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
