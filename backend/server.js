@@ -1,26 +1,27 @@
 // backend/server.js
 const express = require("express");
 const cors = require("cors");
-
 const Stripe = require("stripe");
+
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Necesario para que el backend entienda JSON
+// Middleware
 app.use(express.json());
-
-// Permitir peticiones desde tu frontend en Vercel
 app.use(
   cors({
-    origin: "*", // luego podemos restringirlo a tu dominio de Vercel
+    origin: "*", // más adelante lo limitamos a Vercel
   })
 );
 
-// ----- LÓGICA DEL JUEGO (GRID EN MEMORIA) -----
+// ---------------------------------------
+// LÓGICA DEL JUEGO 40x40 (GRID EN MEMORIA)
+// ---------------------------------------
 
 const GRID_SIZE = 40;
+
 let grid = Array.from({ length: GRID_SIZE }, () =>
   Array.from({ length: GRID_SIZE }, () => ({
     type: "empty",
@@ -56,11 +57,6 @@ app.post("/api/grid/cell", (req, res) => {
   res.json({ ok: true, cell: grid[y][x] });
 });
 
-// Simple endpoint para comprobar que está vivo
-app.get("/", (req, res) => {
-  res.send("Build-Your-Windpark backend is running.");
-});
-
 // Reset completo del grid
 app.post("/api/reset", (req, res) => {
   grid = Array.from({ length: GRID_SIZE }, () =>
@@ -71,12 +67,13 @@ app.post("/api/reset", (req, res) => {
   );
   res.json({ ok: true });
 });
-// ----------------------------------------------
-// WORLD MAP — Gestión de píxeles comprados
-// ----------------------------------------------
-let purchasedTiles = {}; 
-// ejemplo contenido: { "123,456": { owner: "LUIGI" } }
 
+// ---------------------------------------
+// WORLD MAP – Gestión de píxeles comprados
+// ---------------------------------------
+
+// En memoria por ahora (en el futuro usaremos BBDD)
+let purchasedTiles = {}; // { "x,y": { owner: "LUIGI" } }
 
 // Crear sesión de pago Stripe para comprar un pixel
 app.post("/api/world/create-checkout-session", async (req, res) => {
@@ -84,11 +81,14 @@ app.post("/api/world/create-checkout-session", async (req, res) => {
     const { tileX, tileY, zone } = req.body;
 
     if (tileX == null || tileY == null) {
-      return res.status(400).json({ error: "Faltan coordenadas tileX/tileY" });
+      return res
+        .status(400)
+        .json({ error: "Faltan coordenadas tileX/tileY" });
     }
 
     const zoneSafe = zone || "desconocida";
 
+    // Precio 0,50 €
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
@@ -97,15 +97,15 @@ app.post("/api/world/create-checkout-session", async (req, res) => {
           price_data: {
             currency: "eur",
             product_data: {
-              name: `Pixel Energético (${tileX}, ${tileY})`
+              name: `Pixel Energético (${tileX}, ${tileY}) – zona ${zoneSafe}`,
             },
-            unit_amount: 50 // 0,50 €
+            unit_amount: 50, // céntimos = 0,50 €
           },
-          quantity: 1
-        }
+          quantity: 1,
+        },
       ],
       success_url: `https://build-your-windpark.vercel.app/world/success.html?tileX=${tileX}&tileY=${tileY}&zone=${zoneSafe}`,
-      cancel_url: `https://build-your-windpark.vercel.app/world/index.html`
+      cancel_url: `https://build-your-windpark.vercel.app/world/index.html`,
     });
 
     res.json({ url: session.url });
@@ -115,47 +115,36 @@ app.post("/api/world/create-checkout-session", async (req, res) => {
   }
 });
 
-
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error("Error creando sesión Stripe:", err);
-    res.status(500).json({ error: "Stripe error" });
-  }
-});
-
-
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error("Error creando sesión Stripe:", err);
-    res.status(500).json({ error: "Stripe error" });
-  }
-});
-
-
 // Marcar pixel como comprado (DEV MODE)
-// Más adelante lo validaremos con Stripe webhooks
 app.post("/api/world/mark-owned", (req, res) => {
   const { tileX, tileY, ownerName } = req.body;
+
   if (tileX == null || tileY == null) {
     return res.status(400).json({ error: "Faltan coordenadas" });
   }
 
   const key = `${tileX},${tileY}`;
   purchasedTiles[key] = {
-    owner: ownerName || "DESCONOCIDO"
+    owner: ownerName || "DESCONOCIDO",
   };
 
   console.log("🟢 Pixel comprado:", key, purchasedTiles[key]);
   res.json({ ok: true });
 });
 
-
-// Endpoint para consultar qué píxeles ya están comprados
+// Devolver los píxeles comprados
 app.get("/api/world/purchased", (req, res) => {
   res.json(purchasedTiles);
 });
 
+// ---------------------------------------
+// Endpoint simple para health check
+// ---------------------------------------
+app.get("/", (req, res) => {
+  res.send("Build-Your-Windpark backend is running.");
+});
+
+// Arrancamos el servidor
 app.listen(PORT, () => {
   console.log("Backend listening on port", PORT);
 });
-
