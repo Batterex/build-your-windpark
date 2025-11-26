@@ -1,55 +1,56 @@
-// Config básica
+// =========================
+// CONFIG BÁSICA
+// =========================
 const GRID_SIZE = 40;
 const CELL_SIZE = 20;
 
-// Perfiles de zona (ajustan viento, capacidad, pérdidas, etc.)
+// Perfiles de zona
 const ZONE_PROFILES = {
   polar_norte: {
     windFactor: 1.2,
-    substationMW: 60,        // MW por subestación
+    substationMW: 60,
     cableLossPerPixel: 0.004,
-    maxCableLoss: 0.25
+    maxCableLoss: 0.25,
   },
   templado_norte: {
     windFactor: 1.0,
     substationMW: 50,
     cableLossPerPixel: 0.005,
-    maxCableLoss: 0.30
+    maxCableLoss: 0.3,
   },
   tropical: {
     windFactor: 0.9,
     substationMW: 45,
     cableLossPerPixel: 0.006,
-    maxCableLoss: 0.30
+    maxCableLoss: 0.3,
   },
   templado_sur: {
     windFactor: 1.0,
     substationMW: 50,
     cableLossPerPixel: 0.005,
-    maxCableLoss: 0.30
+    maxCableLoss: 0.3,
   },
   polar_sur: {
     windFactor: 1.1,
     substationMW: 55,
     cableLossPerPixel: 0.0045,
-    maxCableLoss: 0.25
+    maxCableLoss: 0.25,
   },
   desconocida: {
     windFactor: 1.0,
     substationMW: 50,
     cableLossPerPixel: 0.005,
-    maxCableLoss: 0.30
-  }
+    maxCableLoss: 0.3,
+  },
 };
 
-// Zona actual del tablero (se rellena al iniciar)
 let currentZone = "desconocida";
 
 let canvas, ctx;
 let grid = [];
 let selectedAsset = null;
 
-// Estado básico de jugador
+// Estado jugador
 let player = {
   id: "local-player",
   name: "Luigi",
@@ -60,19 +61,19 @@ let player = {
   co2Tons: 0,
 };
 
+// =========================
+// INICIALIZACIÓN
+// =========================
 document.addEventListener("DOMContentLoaded", () => {
-    // Leer parámetros de la URL (tileX, tileY, zone)
+  canvas = document.getElementById("game-canvas");
+  ctx = canvas.getContext("2d");
+
   const params = new URLSearchParams(window.location.search);
   const tileX = parseInt(params.get("tileX") || "0", 10);
   const tileY = parseInt(params.get("tileY") || "0", 10);
   currentZone = params.get("zone") || "desconocida";
-  
-  console.log("Tablero cargado para pixel:", tileX, tileY, "zona:", zone);
+  console.log("Tablero para pixel:", tileX, tileY, "zona:", currentZone);
 
-  canvas = document.getElementById("game-canvas");
-  ctx = canvas.getContext("2d");
-
-  // Intentar cargar grid desde backend
   fetchGridFromServer().then((serverGrid) => {
     if (serverGrid && Array.isArray(serverGrid) && serverGrid.length === GRID_SIZE) {
       grid = serverGrid;
@@ -80,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
       initGrid();
     }
 
-    // Asegurar estructura de cada celda
+    // asegurar estructura
     for (let y = 0; y < GRID_SIZE; y++) {
       for (let x = 0; x < GRID_SIZE; x++) {
         if (!grid[y][x]) {
@@ -95,7 +96,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initUI();
     drawGrid();
 
-    // Tick de producción
     setInterval(updateProduction, 5000);
   });
 });
@@ -112,27 +112,23 @@ function initGrid() {
 }
 
 function initUI() {
-  // Botones de build
+  // botones de build
   document.querySelectorAll(".build-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       selectedAsset = btn.dataset.asset;
     });
   });
 
-    // Botón Reset park
+  // botón reset
   const resetBtn = document.getElementById("btn-reset-park");
   if (resetBtn) {
     resetBtn.addEventListener("click", async () => {
       const ok = confirm("¿Seguro que quieres resetear todo el parque?");
       if (!ok) return;
 
-      // Reset en backend
       await resetGridOnServer();
-
-      // Reset local del grid
       initGrid();
 
-      // Reset stats de jugador
       player.points = 200;
       player.windMW = 0;
       player.storageMWh = 0;
@@ -143,11 +139,9 @@ function initUI() {
       drawGrid();
     });
   }
-  
-  // Click en canvas
+
   canvas.addEventListener("click", handleCanvasClick);
 
-  // Hover info
   const hoverInfo = document.getElementById("hover-info");
   canvas.addEventListener("mousemove", (e) => {
     const { x, y } = getCellFromEvent(e);
@@ -158,8 +152,7 @@ function initUI() {
     const cell = grid[y][x];
     hoverInfo.style.left = e.offsetX + 15 + "px";
     hoverInfo.style.top = e.offsetY + 15 + "px";
-    hoverInfo.textContent =
-      cell.type === "empty" ? "Empty plot – click to build" : cell.type;
+    hoverInfo.textContent = cell.type === "empty" ? "Empty plot – click to build" : cell.type;
     hoverInfo.classList.remove("hidden");
   });
 
@@ -171,6 +164,9 @@ function initUI() {
   updatePanels();
 }
 
+// =========================
+// HELPERS
+// =========================
 function getCellFromEvent(e) {
   const rect = canvas.getBoundingClientRect();
   const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
@@ -189,56 +185,43 @@ function hasNeighborConnection(x, y) {
     [0, 1],
     [0, -1],
   ];
-
-function getCableConnections(x, y) {
-  const dirs = {
-    up: false,
-    down: false,
-    left: false,
-    right: false,
-  };
-
-  // Consideramos que un cable "se conecta" también a substations y generadores,
-  // para que la forma visual llegue hasta ellos.
-  const candidates = ["cable", "substation", "turbine_3", "turbine_5", "solar"];
-
-  // arriba
-  if (inBounds(x, y - 1)) {
-    const c = grid[y - 1][x];
-    if (c && candidates.includes(c.type)) dirs.up = true;
-  }
-  // abajo
-  if (inBounds(x, y + 1)) {
-    const c = grid[y + 1][x];
-    if (c && candidates.includes(c.type)) dirs.down = true;
-  }
-  // izquierda
-  if (inBounds(x - 1, y)) {
-    const c = grid[y][x - 1];
-    if (c && candidates.includes(c.type)) dirs.left = true;
-  }
-  // derecha
-  if (inBounds(x + 1, y)) {
-    const c = grid[y][x + 1];
-    if (c && candidates.includes(c.type)) dirs.right = true;
-  }
-
-  return dirs;
-}
-
   for (const [dx, dy] of dirs) {
     const nx = x + dx;
     const ny = y + dy;
     if (!inBounds(nx, ny)) continue;
     const ncell = grid[ny][nx];
     if (!ncell) continue;
-    if (ncell.type === "cable" || ncell.type === "substation") {
-      return true;
-    }
+    if (ncell.type === "cable" || ncell.type === "substation") return true;
   }
   return false;
 }
 
+function getCableConnections(x, y) {
+  const dirs = { up: false, down: false, left: false, right: false };
+  const candidates = ["cable", "substation", "turbine_3", "turbine_5", "solar"];
+
+  if (inBounds(x, y - 1)) {
+    const c = grid[y - 1][x];
+    if (c && candidates.includes(c.type)) dirs.up = true;
+  }
+  if (inBounds(x, y + 1)) {
+    const c = grid[y + 1][x];
+    if (c && candidates.includes(c.type)) dirs.down = true;
+  }
+  if (inBounds(x - 1, y)) {
+    const c = grid[y][x - 1];
+    if (c && candidates.includes(c.type)) dirs.left = true;
+  }
+  if (inBounds(x + 1, y)) {
+    const c = grid[y][x + 1];
+    if (c && candidates.includes(c.type)) dirs.right = true;
+  }
+  return dirs;
+}
+
+// =========================
+// CLICK / CONSTRUCCIÓN
+// =========================
 function handleCanvasClick(e) {
   if (!selectedAsset) return;
   const { x, y } = getCellFromEvent(e);
@@ -246,37 +229,30 @@ function handleCanvasClick(e) {
 
   const cell = grid[y][x];
 
-// MODO BULLDOZER: borrar lo que haya en la celda
-if (selectedAsset === "bulldozer") {
-  if (cell.type !== "empty") {
-    // calcular la devolución (mitad del coste original)
-    const originalCost = getAssetCost(cell.type);
-    const refund = Math.round(originalCost / 2);
+  // MODO BULLDOZER
+  if (selectedAsset === "bulldozer") {
+    if (cell.type !== "empty") {
+      const originalCost = getAssetCost(cell.type);
+      const refund = Math.round(originalCost / 2);
+      player.points += refund;
 
-    // devolver puntos al jugador (hasta máximo 999999 por seguridad, opcional)
-    player.points += refund;
+      removeAssetStats(cell.type);
 
-    // restar estadísticas según lo que quitamos
-    removeAssetStats(cell.type);
+      cell.type = "empty";
+      cell.owner = null;
+      cell.connected = false;
+      cell.distToSub = null;
 
-    // vaciar celda
-    cell.type = "empty";
-    cell.owner = null;
-    cell.connected = false;
-    cell.distToSub = null;
+      drawGrid();
+      updatePanels();
 
-    drawGrid();
-    updatePanels();
-
-    // Guardar en backend (vaciar celda)
-    updateCellOnServer(x, y, "empty", null);
+      updateCellOnServer(x, y, "empty", null);
+    }
+    return;
   }
-  return;
-}
 
-
-  // MODO CONSTRUCCIÓN NORMAL
-  if (cell.type !== "empty") return; // ya ocupado
+  // Construcción normal
+  if (cell.type !== "empty") return;
 
   const cost = getAssetCost(selectedAsset);
   if (player.points < cost) {
@@ -284,10 +260,8 @@ if (selectedAsset === "bulldozer") {
     return;
   }
 
-  // Pagar
   player.points -= cost;
 
-  // Colocar
   cell.type = selectedAsset;
   cell.owner = player.id;
   cell.connected = false;
@@ -295,32 +269,35 @@ if (selectedAsset === "bulldozer") {
 
   applyAssetStats(selectedAsset);
 
-  // Avisos de conexión mínima para turbinas y solar
+  // Aviso si es generador y no tiene conexión mínima
   if (
-    (selectedAsset === "turbine_3" || selectedAsset === "turbine_5" || selectedAsset === "solar") &&
+    (selectedAsset === "turbine_3" ||
+      selectedAsset === "turbine_5" ||
+      selectedAsset === "solar") &&
     !hasNeighborConnection(x, y)
   ) {
     alert(
       "Este generador todavía NO producirá energía.\n\n" +
-      "Debe estar conectado mediante CABLE a una SUBESTACIÓN para evacuar la energía."
+        "Debe estar conectado mediante CABLE a una SUBESTACIÓN para evacuar la energía."
     );
   }
 
   drawGrid();
   updatePanels();
 
-  // Guardar también en backend
   updateCellOnServer(x, y, cell.type, cell.owner);
 }
 
-
+// =========================
+// DIBUJO GRID + ASSETS
+// =========================
 function drawGrid() {
   ctx.fillStyle = "#020617";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.save();
-  ctx.strokeStyle = "rgba(15,23,42,0.6)"; // gris muy oscuro con algo de transparencia
-  ctx.lineWidth = 0.4;                    // línea muy fina
+  ctx.strokeStyle = "rgba(15,23,42,0.6)";
+  ctx.lineWidth = 0.4;
 
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
@@ -332,8 +309,6 @@ function drawGrid() {
   ctx.restore();
 }
 
-
-// Dibuja iconos
 function drawAsset(type, x, y) {
   const cx = x * CELL_SIZE + CELL_SIZE / 2;
   const cy = y * CELL_SIZE + CELL_SIZE / 2;
@@ -341,13 +316,10 @@ function drawAsset(type, x, y) {
 
   if (!type || type === "empty") return;
 
-  // ==========================
   // TURBINAS
-  // ==========================
   if (type.startsWith("turbine")) {
     const isConnected = cell && cell.connected;
 
-    // torre
     ctx.strokeStyle = isConnected ? "#e5e7eb" : "#f97316";
     ctx.lineWidth = 1.4;
     ctx.beginPath();
@@ -355,20 +327,16 @@ function drawAsset(type, x, y) {
     ctx.lineTo(cx, cy - 4);
     ctx.stroke();
 
-    // base
     ctx.fillStyle = isConnected ? "#94a3b8" : "#fb923c";
     ctx.fillRect(cx - 4, cy + 6, 8, 3);
 
-    // nacelle
     ctx.fillStyle = isConnected ? "#e5e7eb" : "#fed7aa";
     ctx.fillRect(cx - 3, cy - 7, 6, 4);
 
-    // rotor
     ctx.beginPath();
     ctx.arc(cx, cy - 5, 2.4, 0, Math.PI * 2);
     ctx.fill();
 
-    // palas
     ctx.strokeStyle = isConnected ? "#e5e7eb" : "#fed7aa";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -382,9 +350,7 @@ function drawAsset(type, x, y) {
     return;
   }
 
-  // ==========================
-  // BESS / BATERÍA
-  // ==========================
+  // BESS
   if (type.startsWith("bess")) {
     ctx.fillStyle = "#0f172a";
     ctx.strokeStyle = "#38bdf8";
@@ -392,11 +358,9 @@ function drawAsset(type, x, y) {
     ctx.fillRect(cx - 7, cy - 5, 14, 10);
     ctx.strokeRect(cx - 7, cy - 5, 14, 10);
 
-    // tapa
     ctx.fillStyle = "#38bdf8";
     ctx.fillRect(cx - 4, cy - 7, 8, 2);
 
-    // rayo
     ctx.fillStyle = "#38bdf8";
     ctx.beginPath();
     ctx.moveTo(cx, cy - 3);
@@ -410,9 +374,7 @@ function drawAsset(type, x, y) {
     return;
   }
 
-  // ==========================
   // SUBESTACIÓN
-  // ==========================
   if (type === "substation") {
     ctx.fillStyle = "#0f172a";
     ctx.strokeStyle = "#fbbf24";
@@ -420,14 +382,12 @@ function drawAsset(type, x, y) {
     ctx.fillRect(cx - 7, cy - 5, 14, 10);
     ctx.strokeRect(cx - 7, cy - 5, 14, 10);
 
-    // ventanitas
     ctx.fillStyle = "#fbbf24";
     ctx.globalAlpha = 0.35;
     ctx.fillRect(cx - 5, cy - 3, 4, 6);
     ctx.fillRect(cx + 1, cy - 3, 4, 6);
     ctx.globalAlpha = 1;
 
-    // rayo HV
     ctx.fillStyle = "#fbbf24";
     ctx.beginPath();
     ctx.moveTo(cx, cy - 4);
@@ -441,9 +401,7 @@ function drawAsset(type, x, y) {
     return;
   }
 
-  // ==========================
-  // CABLE – se adapta a conexiones
-  // ==========================
+  // CABLE con conexiones
   if (type === "cable") {
     const { up, down, left, right } = getCableConnections(x, y);
     const half = CELL_SIZE / 2 - 1;
@@ -452,7 +410,6 @@ function drawAsset(type, x, y) {
     ctx.lineWidth = 1.6;
     ctx.beginPath();
 
-    // si no hay conexiones, dibujamos pequeño nodo
     if (!up && !down && !left && !right) {
       ctx.moveTo(cx - 2, cy);
       ctx.lineTo(cx + 2, cy);
@@ -479,7 +436,6 @@ function drawAsset(type, x, y) {
 
     ctx.stroke();
 
-    // pequeño nodo central
     ctx.strokeStyle = "#475569";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -488,9 +444,7 @@ function drawAsset(type, x, y) {
     return;
   }
 
-  // ==========================
   // MET MAST
-  // ==========================
   if (type === "metmast") {
     ctx.strokeStyle = "#a855f7";
     ctx.lineWidth = 1.4;
@@ -517,9 +471,7 @@ function drawAsset(type, x, y) {
     return;
   }
 
-  // ==========================
   // SOLAR
-  // ==========================
   if (type === "solar") {
     ctx.strokeStyle = "#22c55e";
     ctx.lineWidth = 1.4;
@@ -544,168 +496,9 @@ function drawAsset(type, x, y) {
   }
 }
 
-  // BESS (batería / contenedor)
-  if (type.startsWith("bess")) {
-    ctx.fillStyle = "#0f172a";
-    ctx.strokeStyle = "#38bdf8";
-    ctx.lineWidth = 1.4;
-    ctx.fillRect(cx - 7, cy - 5, 14, 10);
-    ctx.strokeRect(cx - 7, cy - 5, 14, 10);
-
-    // tapa
-    ctx.fillStyle = "#38bdf8";
-    ctx.fillRect(cx - 4, cy - 7, 8, 2);
-
-    // rayo
-    ctx.fillStyle = "#38bdf8";
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - 3);
-    ctx.lineTo(cx - 2, cy + 1);
-    ctx.lineTo(cx, cy + 1);
-    ctx.lineTo(cx - 1, cy + 5);
-    ctx.lineTo(cx + 2, cy + 1);
-    ctx.lineTo(cx, cy + 1);
-    ctx.closePath();
-    ctx.fill();
-    return;
-  }
-
-  // SUBESTACIÓN
-  if (type === "substation") {
-    ctx.fillStyle = "#0f172a";
-    ctx.strokeStyle = "#fbbf24";
-    ctx.lineWidth = 1.4;
-    ctx.fillRect(cx - 7, cy - 5, 14, 10);
-    ctx.strokeRect(cx - 7, cy - 5, 14, 10);
-
-    // ventanitas
-    ctx.fillStyle = "#fbbf24";
-    ctx.globalAlpha = 0.35;
-    ctx.fillRect(cx - 5, cy - 3, 4, 6);
-    ctx.fillRect(cx + 1, cy - 3, 4, 6);
-    ctx.globalAlpha = 1;
-
-    // rayo alto voltaje
-    ctx.fillStyle = "#fbbf24";
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - 4);
-    ctx.lineTo(cx - 2, cy + 1);
-    ctx.lineTo(cx, cy + 1);
-    ctx.lineTo(cx - 1, cy + 5);
-    ctx.lineTo(cx + 2, cy);
-    ctx.lineTo(cx, cy);
-    ctx.closePath();
-    ctx.fill();
-    return;
-  }
-
-// CABLE con forma según conexiones
-if (type === "cable") {
-  const { up, down, left, right } = getCableConnections(x, y);
-  const half = CELL_SIZE / 2 - 1;
-
-  ctx.strokeStyle = "#64748b";
-  ctx.lineWidth = 1.6;
-  ctx.beginPath();
-
-  // si no hay conexiones, dibujamos un pequeño “nodo”
-  if (!up && !down && !left && !right) {
-    ctx.moveTo(cx - 2, cy);
-    ctx.lineTo(cx + 2, cy);
-    ctx.stroke();
-    return;
-  }
-
-  // segmento hacia arriba
-  if (up) {
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx, cy - half);
-  }
-  // segmento hacia abajo
-  if (down) {
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx, cy + half);
-  }
-  // segmento hacia la izquierda
-  if (left) {
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx - half, cy);
-  }
-  // segmento hacia la derecha
-  if (right) {
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + half, cy);
-  }
-
-  ctx.stroke();
-
-  // pequeño refuerzo visual en el centro
-  ctx.strokeStyle = "#475569";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.arc(cx, cy, 1.3, 0, Math.PI * 2);
-  ctx.stroke();
-
-  return;
-}
-
-  // MET MAST
-  if (type === "metmast") {
-    ctx.strokeStyle = "#a855f7";
-    ctx.lineWidth = 1.4;
-
-    // torre triangular
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - 7);
-    ctx.lineTo(cx - 4, cy + 7);
-    ctx.lineTo(cx + 4, cy + 7);
-    ctx.closePath();
-    ctx.stroke();
-
-    // cabeza
-    ctx.fillStyle = "#a855f7";
-    ctx.beginPath();
-    ctx.arc(cx, cy - 7, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // anemómetro
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - 7);
-    ctx.lineTo(cx + 5, cy - 9);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cx + 6, cy - 9.3, 1.1, 0, Math.PI * 2);
-    ctx.fill();
-    return;
-  }
-
-  // SOLAR
-  if (type === "solar") {
-    ctx.strokeStyle = "#22c55e";
-    ctx.lineWidth = 1.4;
-
-    ctx.beginPath();
-    ctx.moveTo(cx - 7, cy + 2);
-    ctx.lineTo(cx + 7, cy - 2);
-    ctx.lineTo(cx + 5, cy - 7);
-    ctx.lineTo(cx - 9, cy - 3);
-    ctx.closePath();
-    ctx.stroke();
-
-    // estructura
-    ctx.strokeStyle = "#94a3b8";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(cx - 6, cy + 3);
-    ctx.lineTo(cx - 6, cy + 7);
-    ctx.moveTo(cx + 4, cy + 1);
-    ctx.lineTo(cx + 4, cy + 7);
-    ctx.stroke();
-    return;
-  }
-}
-
-
+// =========================
+// COSTES / STATS
+// =========================
 function getAssetCost(type) {
   switch (type) {
     case "turbine_3":
@@ -731,10 +524,9 @@ function applyAssetStats(type) {
   if (type === "turbine_3") player.windMW += 3;
   if (type === "turbine_5") player.windMW += 5;
   if (type === "bess_10") player.storageMWh += 10;
-  if (type === "solar") player.windMW += 1; // simplificación
+  if (type === "solar") player.windMW += 1;
 }
 
-// Nueva: revertir stats al borrar un asset
 function removeAssetStats(type) {
   if (type === "turbine_3") player.windMW -= 3;
   if (type === "turbine_5") player.windMW -= 5;
@@ -742,12 +534,10 @@ function removeAssetStats(type) {
   if (type === "solar") player.windMW -= 1;
 }
 
-/**
- * Calcula distancias desde subestaciones a cables (BFS)
- * y marca qué turbinas están realmente conectadas.
- */
+// =========================
+// CONEXIONES + PRODUCCIÓN
+// =========================
 function computeConnectionsAndDistances() {
-  // Reset
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
@@ -762,18 +552,17 @@ function computeConnectionsAndDistances() {
   );
 
   const queue = [];
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ];
 
-  // Inicializar BFS desde todas las subestaciones
+  // subestaciones
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       if (grid[y][x].type === "substation") {
-        // Desde substation miramos cables adyacentes
-        const dirs = [
-          [1, 0],
-          [-1, 0],
-          [0, 1],
-          [0, -1],
-        ];
         for (const [dx, dy] of dirs) {
           const nx = x + dx;
           const ny = y + dy;
@@ -789,14 +578,7 @@ function computeConnectionsAndDistances() {
     }
   }
 
-  // BFS sobre cables
-  const dirs = [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-  ];
-
+  // BFS cables
   while (queue.length > 0) {
     const { x, y } = queue.shift();
     const d = dist[y][x];
@@ -814,11 +596,11 @@ function computeConnectionsAndDistances() {
     }
   }
 
-  // Determinar turbinas conectadas (deben tocar cable con dist válida)
+  // Turbinas conectadas?
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
-      if (!cell || (!cell.type.startsWith("turbine"))) continue;
+      if (!cell || !cell.type.startsWith("turbine")) continue;
 
       let bestDist = Infinity;
 
@@ -835,7 +617,7 @@ function computeConnectionsAndDistances() {
 
       if (bestDist < Infinity) {
         cell.connected = true;
-        cell.distToSub = bestDist; // nº de pixels de cable hasta substation más cercana
+        cell.distToSub = bestDist;
       } else {
         cell.connected = false;
         cell.distToSub = null;
@@ -844,7 +626,6 @@ function computeConnectionsAndDistances() {
   }
 }
 
-// Wake effect: viento de norte a sur (y creciente)
 function computeWakeFactor(x, y) {
   let upstream = 0;
   const maxRange = 6;
@@ -854,33 +635,25 @@ function computeWakeFactor(x, y) {
     if (!inBounds(x, ny)) break;
     const cell = grid[ny][x];
     if (!cell || !cell.connected) continue;
-    if (cell.type === "turbine_3" || cell.type === "turbine_5") {
-      upstream++;
-    }
+    if (cell.type === "turbine_3" || cell.type === "turbine_5") upstream++;
   }
 
   const factor = 1 - 0.1 * upstream;
-  return Math.max(0.4, factor); // mínimo 40% de eficiencia
+  return Math.max(0.4, factor);
 }
 
 function computeCableLossFactor(distToSub) {
   if (distToSub == null) return 1;
-
   const profile = ZONE_PROFILES[currentZone] || ZONE_PROFILES.desconocida;
-
   const lossPerPixel = profile.cableLossPerPixel;
   const maxLoss = profile.maxCableLoss;
-
   const loss = Math.min(maxLoss, distToSub * lossPerPixel);
-  return 1 - loss; // 1 = sin pérdidas, 0 = pérdidas totales
+  return 1 - loss;
 }
 
-// “Producción” demo con lógica conjunta
 function updateProduction() {
-  // 1) Conectividad y distancias
   computeConnectionsAndDistances();
 
-  // 2) Capacidad de subestación (dependiente de la zona)
   let numSubstations = 0;
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
@@ -889,11 +662,9 @@ function updateProduction() {
   }
 
   const profile = ZONE_PROFILES[currentZone] || ZONE_PROFILES.desconocida;
-  const capacityPerSubstation = profile.substationMW; // MW por subestación según zona
-  const substationCapacityMW = numSubstations * capacityPerSubstation;
+  const capacityPerSub = profile.substationMW;
+  const substationCapacityMW = numSubstations * capacityPerSub;
 
-
-  // 3) Potencia nominal conectada (MW)
   let connectedMW = 0;
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
@@ -906,10 +677,9 @@ function updateProduction() {
 
   let capacityFactor = 1;
   if (substationCapacityMW > 0 && connectedMW > substationCapacityMW) {
-    capacityFactor = substationCapacityMW / connectedMW; // curtailment
+    capacityFactor = substationCapacityMW / connectedMW;
   }
 
-  // 4) Producción
   let base = 0;
 
   for (let y = 0; y < GRID_SIZE; y++) {
@@ -924,19 +694,15 @@ function updateProduction() {
 
       const wakeFactor = computeWakeFactor(x, y);
       const cableFactor = computeCableLossFactor(cell.distToSub);
-
-      const profile = ZONE_PROFILES[currentZone] || ZONE_PROFILES.desconocida;
       const windFactor = profile.windFactor;
 
       const localProd =
         basePerTick * windFactor * wakeFactor * cableFactor * capacityFactor;
 
       base += localProd;
-
     }
   }
 
-  // BESS bonus simple
   const bessBonus = player.storageMWh > 0 ? 0.05 : 0;
   const produced = base * (1 + bessBonus);
 
@@ -945,12 +711,14 @@ function updateProduction() {
   player.points += Math.round(produced / 2);
 
   updatePanels();
-  drawGrid(); // para repintar turbinas conectadas/desconectadas
+  drawGrid();
 }
 
+// =========================
+// PANEL STATS
+// =========================
 function updatePanels() {
-  document.getElementById("stat-wind").textContent =
-    player.windMW.toFixed(0);
+  document.getElementById("stat-wind").textContent = player.windMW.toFixed(0);
   document.getElementById("stat-storage").textContent =
     player.storageMWh.toFixed(0);
   document.getElementById("stat-energy").textContent =
@@ -968,28 +736,9 @@ function updatePanels() {
   document.getElementById("player-name").textContent = player.name;
   document.getElementById("player-points").textContent =
     player.points.toFixed(0);
-}  // Mostrar zona actual en el panel de jugador (si existe el elemento)
-  const params = new URLSearchParams(window.location.search);
-  const zone = params.get("zone") || "desconocida";
+
   const bonusEl = document.getElementById("player-bonus");
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
