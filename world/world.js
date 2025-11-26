@@ -138,8 +138,20 @@ canvas.addEventListener("click", async (evt) => {
   const { x, y } = getWorldCoords(evt);
   const zone = getZoneFromCoords(x, y);
 
+  // ==========================
+  // MODO DESARROLLO (sin pagos)
+  // ==========================
+  if (!PAYMENTS_ENABLED) {
+    console.log("Stripe DESACTIVADO → modo desarrollo.");
+    window.location.href = `/index.html?tileX=${x}&tileY=${y}&zone=${zone}`;
+    return;
+  }
+
+  // ==========================
+  // MODO PRODUCCIÓN (Stripe ON)
+  // ==========================
   const ok = confirm(
-    `Pixel (${x}, ${y}) en zona ${zone}.\n\nPrecio: 0,50 €.\n\n¿Quieres ir a pagar con Stripe (modo test)?`
+    `Pixel (${x}, ${y}) en zona ${zone}.\n\nPrecio: 0,50 €.\n\n¿Quieres ir a pagar con Stripe?`
   );
   if (!ok) return;
 
@@ -147,7 +159,7 @@ canvas.addEventListener("click", async (evt) => {
     const res = await fetch("https://build-your-windpark-backend.onrender.com/api/world/create-checkout-session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tileX: x, tileY: y, zone })   // 👈 AÑADIMOS zone
+      body: JSON.stringify({ tileX: x, tileY: y, zone })
     });
 
     const data = await res.json();
@@ -161,4 +173,5 @@ canvas.addEventListener("click", async (evt) => {
     alert("Error al conectar con el servidor de pagos.");
   }
 });
+
 
