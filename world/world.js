@@ -1,3 +1,8 @@
+<button class="build-btn" data-asset="bulldozer">
+  <img src="assets/icons/bulldozer.svg" alt="" />
+  Bulldozer – borrar celda
+</button>
+
 // WORLD MAP REAL CON ZONAS PREDEFINIDAS
 // -------------------------------------
 // Grid lógico de 1000x1000 (1M píxeles), pero usamos un canvas 1000x500
