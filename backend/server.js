@@ -124,6 +124,14 @@ app.post("/api/world/create-checkout-session", async (req, res) => {
 });
 
 
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error("Error creando sesión Stripe:", err);
+    res.status(500).json({ error: "Stripe error" });
+  }
+});
+
+
 // Marcar pixel como comprado (DEV MODE)
 // Más adelante lo validaremos con Stripe webhooks
 app.post("/api/world/mark-owned", (req, res) => {
