@@ -341,7 +341,9 @@ function drawAsset(type, x, y) {
 
   if (!type || type === "empty") return;
 
-  // TURBINAS: estilo torre + nacelle, blanco si conectada, naranja si no
+  // ==========================
+  // TURBINAS
+  // ==========================
   if (type.startsWith("turbine")) {
     const isConnected = cell && cell.connected;
 
@@ -379,6 +381,168 @@ function drawAsset(type, x, y) {
     ctx.stroke();
     return;
   }
+
+  // ==========================
+  // BESS / BATERÍA
+  // ==========================
+  if (type.startsWith("bess")) {
+    ctx.fillStyle = "#0f172a";
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = 1.4;
+    ctx.fillRect(cx - 7, cy - 5, 14, 10);
+    ctx.strokeRect(cx - 7, cy - 5, 14, 10);
+
+    // tapa
+    ctx.fillStyle = "#38bdf8";
+    ctx.fillRect(cx - 4, cy - 7, 8, 2);
+
+    // rayo
+    ctx.fillStyle = "#38bdf8";
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 3);
+    ctx.lineTo(cx - 2, cy + 1);
+    ctx.lineTo(cx, cy + 1);
+    ctx.lineTo(cx - 1, cy + 5);
+    ctx.lineTo(cx + 2, cy + 1);
+    ctx.lineTo(cx, cy + 1);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  // ==========================
+  // SUBESTACIÓN
+  // ==========================
+  if (type === "substation") {
+    ctx.fillStyle = "#0f172a";
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 1.4;
+    ctx.fillRect(cx - 7, cy - 5, 14, 10);
+    ctx.strokeRect(cx - 7, cy - 5, 14, 10);
+
+    // ventanitas
+    ctx.fillStyle = "#fbbf24";
+    ctx.globalAlpha = 0.35;
+    ctx.fillRect(cx - 5, cy - 3, 4, 6);
+    ctx.fillRect(cx + 1, cy - 3, 4, 6);
+    ctx.globalAlpha = 1;
+
+    // rayo HV
+    ctx.fillStyle = "#fbbf24";
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 4);
+    ctx.lineTo(cx - 2, cy + 1);
+    ctx.lineTo(cx, cy + 1);
+    ctx.lineTo(cx - 1, cy + 5);
+    ctx.lineTo(cx + 2, cy);
+    ctx.lineTo(cx, cy);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  // ==========================
+  // CABLE – se adapta a conexiones
+  // ==========================
+  if (type === "cable") {
+    const { up, down, left, right } = getCableConnections(x, y);
+    const half = CELL_SIZE / 2 - 1;
+
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+
+    // si no hay conexiones, dibujamos pequeño nodo
+    if (!up && !down && !left && !right) {
+      ctx.moveTo(cx - 2, cy);
+      ctx.lineTo(cx + 2, cy);
+      ctx.stroke();
+      return;
+    }
+
+    if (up) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx, cy - half);
+    }
+    if (down) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx, cy + half);
+    }
+    if (left) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx - half, cy);
+    }
+    if (right) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + half, cy);
+    }
+
+    ctx.stroke();
+
+    // pequeño nodo central
+    ctx.strokeStyle = "#475569";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 1.3, 0, Math.PI * 2);
+    ctx.stroke();
+    return;
+  }
+
+  // ==========================
+  // MET MAST
+  // ==========================
+  if (type === "metmast") {
+    ctx.strokeStyle = "#a855f7";
+    ctx.lineWidth = 1.4;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 7);
+    ctx.lineTo(cx - 4, cy + 7);
+    ctx.lineTo(cx + 4, cy + 7);
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.fillStyle = "#a855f7";
+    ctx.beginPath();
+    ctx.arc(cx, cy - 7, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 7);
+    ctx.lineTo(cx + 5, cy - 9);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx + 6, cy - 9.3, 1.1, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+
+  // ==========================
+  // SOLAR
+  // ==========================
+  if (type === "solar") {
+    ctx.strokeStyle = "#22c55e";
+    ctx.lineWidth = 1.4;
+
+    ctx.beginPath();
+    ctx.moveTo(cx - 7, cy + 2);
+    ctx.lineTo(cx + 7, cy - 2);
+    ctx.lineTo(cx + 5, cy - 7);
+    ctx.lineTo(cx - 9, cy - 3);
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.strokeStyle = "#94a3b8";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, cy + 3);
+    ctx.lineTo(cx - 6, cy + 7);
+    ctx.moveTo(cx + 4, cy + 1);
+    ctx.lineTo(cx + 4, cy + 7);
+    ctx.stroke();
+    return;
+  }
+}
 
   // BESS (batería / contenedor)
   if (type.startsWith("bess")) {
@@ -811,6 +975,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
