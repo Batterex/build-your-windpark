@@ -241,14 +241,20 @@ function drawGrid() {
   ctx.fillStyle = "#020617";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.strokeStyle = "#1f2937";
+  ctx.save();
+  ctx.strokeStyle = "rgba(15,23,42,0.6)"; // gris muy oscuro con algo de transparencia
+  ctx.lineWidth = 0.4;                    // línea muy fina
+
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
       drawAsset(grid[y][x].type, x, y);
     }
   }
+
+  ctx.restore();
 }
+
 
 // Dibuja iconos
 function drawAsset(type, x, y) {
@@ -700,6 +706,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
