@@ -258,43 +258,178 @@ function drawAsset(type, x, y) {
 
   if (!type || type === "empty") return;
 
+  // TURBINAS: estilo torre + nacelle, blanco si conectada, naranja si no
   if (type.startsWith("turbine")) {
-    // Blanca si conectada, naranja si no
-    ctx.strokeStyle = cell && cell.connected ? "#e5e7eb" : "#f97316";
+    const isConnected = cell && cell.connected;
+
+    // torre
+    ctx.strokeStyle = isConnected ? "#e5e7eb" : "#f97316";
+    ctx.lineWidth = 1.4;
     ctx.beginPath();
-    ctx.moveTo(cx, cy - 7);
-    ctx.lineTo(cx, cy + 7);
+    ctx.moveTo(cx, cy + 6);
+    ctx.lineTo(cx, cy - 4);
     ctx.stroke();
+
+    // base
+    ctx.fillStyle = isConnected ? "#94a3b8" : "#fb923c";
+    ctx.fillRect(cx - 4, cy + 6, 8, 3);
+
+    // nacelle
+    ctx.fillStyle = isConnected ? "#e5e7eb" : "#fed7aa";
+    ctx.fillRect(cx - 3, cy - 7, 6, 4);
+
+    // rotor
     ctx.beginPath();
-    ctx.arc(cx, cy - 5, 3, 0, Math.PI * 2);
+    ctx.arc(cx, cy - 5, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // palas
+    ctx.strokeStyle = isConnected ? "#e5e7eb" : "#fed7aa";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 5);
+    ctx.lineTo(cx - 7, cy - 11);
+    ctx.moveTo(cx, cy - 5);
+    ctx.lineTo(cx + 8, cy - 9);
+    ctx.moveTo(cx, cy - 5);
+    ctx.lineTo(cx, cy + 3);
     ctx.stroke();
-  } else if (type.startsWith("bess")) {
+    return;
+  }
+
+  // BESS (batería / contenedor)
+  if (type.startsWith("bess")) {
+    ctx.fillStyle = "#0f172a";
     ctx.strokeStyle = "#38bdf8";
-    ctx.strokeRect(cx - 6, cy - 6, 12, 12);
+    ctx.lineWidth = 1.4;
+    ctx.fillRect(cx - 7, cy - 5, 14, 10);
+    ctx.strokeRect(cx - 7, cy - 5, 14, 10);
+
+    // tapa
+    ctx.fillStyle = "#38bdf8";
+    ctx.fillRect(cx - 4, cy - 7, 8, 2);
+
+    // rayo
+    ctx.fillStyle = "#38bdf8";
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 3);
+    ctx.lineTo(cx - 2, cy + 1);
+    ctx.lineTo(cx, cy + 1);
+    ctx.lineTo(cx - 1, cy + 5);
+    ctx.lineTo(cx + 2, cy + 1);
+    ctx.lineTo(cx, cy + 1);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  // SUBESTACIÓN
+  if (type === "substation") {
+    ctx.fillStyle = "#0f172a";
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 1.4;
+    ctx.fillRect(cx - 7, cy - 5, 14, 10);
+    ctx.strokeRect(cx - 7, cy - 5, 14, 10);
+
+    // ventanitas
+    ctx.fillStyle = "#fbbf24";
+    ctx.globalAlpha = 0.35;
+    ctx.fillRect(cx - 5, cy - 3, 4, 6);
+    ctx.fillRect(cx + 1, cy - 3, 4, 6);
+    ctx.globalAlpha = 1;
+
+    // rayo alto voltaje
+    ctx.fillStyle = "#fbbf24";
     ctx.beginPath();
     ctx.moveTo(cx, cy - 4);
-    ctx.lineTo(cx, cy + 4);
-    ctx.stroke();
-  } else if (type === "substation") {
-    ctx.strokeStyle = "#fbbf24";
-    ctx.strokeRect(cx - 7, cy - 7, 14, 14);
-  } else if (type === "cable") {
-    ctx.strokeStyle = "#6b7280";
+    ctx.lineTo(cx - 2, cy + 1);
+    ctx.lineTo(cx, cy + 1);
+    ctx.lineTo(cx - 1, cy + 5);
+    ctx.lineTo(cx + 2, cy);
+    ctx.lineTo(cx, cy);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  // CABLE
+  if (type === "cable") {
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 1.4;
     ctx.beginPath();
     ctx.moveTo(cx - 8, cy);
     ctx.lineTo(cx + 8, cy);
     ctx.stroke();
-  } else if (type === "metmast") {
+
+    ctx.strokeStyle = "#475569";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 5, cy - 3);
+    ctx.lineTo(cx - 5, cy + 3);
+    ctx.moveTo(cx, cy - 3);
+    ctx.lineTo(cx, cy + 3);
+    ctx.moveTo(cx + 5, cy - 3);
+    ctx.lineTo(cx + 5, cy + 3);
+    ctx.stroke();
+    return;
+  }
+
+  // MET MAST
+  if (type === "metmast") {
     ctx.strokeStyle = "#a855f7";
+    ctx.lineWidth = 1.4;
+
+    // torre triangular
     ctx.beginPath();
     ctx.moveTo(cx, cy - 7);
-    ctx.lineTo(cx, cy + 7);
+    ctx.lineTo(cx - 4, cy + 7);
+    ctx.lineTo(cx + 4, cy + 7);
+    ctx.closePath();
     ctx.stroke();
-  } else if (type === "solar") {
+
+    // cabeza
+    ctx.fillStyle = "#a855f7";
+    ctx.beginPath();
+    ctx.arc(cx, cy - 7, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // anemómetro
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 7);
+    ctx.lineTo(cx + 5, cy - 9);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx + 6, cy - 9.3, 1.1, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+
+  // SOLAR
+  if (type === "solar") {
     ctx.strokeStyle = "#22c55e";
-    ctx.strokeRect(cx - 7, cy - 4, 14, 8);
+    ctx.lineWidth = 1.4;
+
+    ctx.beginPath();
+    ctx.moveTo(cx - 7, cy + 2);
+    ctx.lineTo(cx + 7, cy - 2);
+    ctx.lineTo(cx + 5, cy - 7);
+    ctx.lineTo(cx - 9, cy - 3);
+    ctx.closePath();
+    ctx.stroke();
+
+    // estructura
+    ctx.strokeStyle = "#94a3b8";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, cy + 3);
+    ctx.lineTo(cx - 6, cy + 7);
+    ctx.moveTo(cx + 4, cy + 1);
+    ctx.lineTo(cx + 4, cy + 7);
+    ctx.stroke();
+    return;
   }
 }
+
 
 function getAssetCost(type) {
   switch (type) {
@@ -565,6 +700,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
