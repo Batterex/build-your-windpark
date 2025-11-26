@@ -81,13 +81,14 @@ let purchasedTiles = {};
 // Crear sesión de pago Stripe para comprar un pixel
 app.post("/api/world/create-checkout-session", async (req, res) => {
   try {
-    const { tileX, tileY } = req.body;
+    const { tileX, tileY, zone } = req.body;
 
     if (tileX == null || tileY == null) {
       return res.status(400).json({ error: "Faltan coordenadas tileX/tileY" });
     }
 
-    // Precio 0,09 €
+    const zoneSafe = zone || "desconocida";
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
@@ -98,14 +99,22 @@ app.post("/api/world/create-checkout-session", async (req, res) => {
             product_data: {
               name: `Pixel Energético (${tileX}, ${tileY})`
             },
-            unit_amount: 59 // céntimos = 0,59 €
+            unit_amount: 50 // 0,50 €
           },
           quantity: 1
         }
       ],
-      success_url: `https://build-your-windpark.vercel.app/world/success.html?tileX=${tileX}&tileY=${tileY}`,
+      success_url: `https://build-your-windpark.vercel.app/world/success.html?tileX=${tileX}&tileY=${tileY}&zone=${zoneSafe}`,
       cancel_url: `https://build-your-windpark.vercel.app/world/index.html`
     });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error("Error creando sesión Stripe:", err);
+    res.status(500).json({ error: "Stripe error" });
+  }
+});
+
 
     res.json({ url: session.url });
   } catch (err) {
