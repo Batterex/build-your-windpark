@@ -109,3 +109,4 @@ canvas.addEventListener("click", async (evt) => {
     alert("Error al conectar con el servidor de pagos.");
   }
 });
+
