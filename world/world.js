@@ -81,16 +81,32 @@ canvas.addEventListener("mousemove", (evt) => {
   infoBox.classList.remove("hidden");
 });
 
-canvas.addEventListener("mouseleave", () => {
-  infoBox.classList.add("hidden");
-});
-
-// CLICK → abrir tablero 40×40 EN MODO DEV, pasando tileX, tileY y zona
-canvas.addEventListener("click", (evt) => {
+// CLICK → compra del pixel con Stripe (modo test) y luego tablero
+canvas.addEventListener("click", async (evt) => {
   const { x, y } = getWorldCoords(evt);
   const zone = getZoneFromCoords(x, y);
 
-  // MODO DESARROLLO:
-  // cualquier pixel abre el tablero 40x40, pasando también la zona.
-  window.location.href = `/index.html?tileX=${x}&tileY=${y}&zone=${zone}`;
+  const ok = confirm(
+    `Pixel (${x}, ${y}) en zona ${zone}.\n\nPrecio: 0,09 €.\n\n¿Quieres ir a pagar con Stripe (modo test)?`
+  );
+  if (!ok) return;
+
+  try {
+    const res = await fetch("https://build-your-windpark-backend.onrender.com/api/world/create-checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tileX: x, tileY: y })
+    });
+
+    const data = await res.json();
+    if (data.url) {
+      // redirigir a Stripe Checkout
+      window.location.href = data.url;
+    } else {
+      alert("No se pudo crear la sesión de pago.");
+    }
+  } catch (err) {
+    console.error("Error al llamar al backend:", err);
+    alert("Error al conectar con el servidor de pagos.");
+  }
 });
