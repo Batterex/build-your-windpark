@@ -250,6 +250,17 @@ function handleCanvasClick(e) {
 
   applyAssetStats(selectedAsset);
 
+  // Avisos de conexión mínima para turbinas y solar
+  if (
+    (selectedAsset === "turbine_3" || selectedAsset === "turbine_5" || selectedAsset === "solar") &&
+    !hasNeighborConnection(x, y)
+  ) {
+    alert(
+      "Este generador todavía NO producirá energía.\n\n" +
+      "Debe estar conectado mediante CABLE a una SUBESTACIÓN para evacuar la energía."
+    );
+  }
+
   drawGrid();
   updatePanels();
 
@@ -727,6 +738,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
