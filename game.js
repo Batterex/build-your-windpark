@@ -433,27 +433,55 @@ function drawAsset(type, x, y) {
     return;
   }
 
-  // CABLE
-  if (type === "cable") {
-    ctx.strokeStyle = "#64748b";
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(cx - 8, cy);
-    ctx.lineTo(cx + 8, cy);
-    ctx.stroke();
+// CABLE con forma según conexiones
+if (type === "cable") {
+  const { up, down, left, right } = getCableConnections(x, y);
+  const half = CELL_SIZE / 2 - 1;
 
-    ctx.strokeStyle = "#475569";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(cx - 5, cy - 3);
-    ctx.lineTo(cx - 5, cy + 3);
-    ctx.moveTo(cx, cy - 3);
-    ctx.lineTo(cx, cy + 3);
-    ctx.moveTo(cx + 5, cy - 3);
-    ctx.lineTo(cx + 5, cy + 3);
+  ctx.strokeStyle = "#64748b";
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+
+  // si no hay conexiones, dibujamos un pequeño “nodo”
+  if (!up && !down && !left && !right) {
+    ctx.moveTo(cx - 2, cy);
+    ctx.lineTo(cx + 2, cy);
     ctx.stroke();
     return;
   }
+
+  // segmento hacia arriba
+  if (up) {
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx, cy - half);
+  }
+  // segmento hacia abajo
+  if (down) {
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx, cy + half);
+  }
+  // segmento hacia la izquierda
+  if (left) {
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx - half, cy);
+  }
+  // segmento hacia la derecha
+  if (right) {
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + half, cy);
+  }
+
+  ctx.stroke();
+
+  // pequeño refuerzo visual en el centro
+  ctx.strokeStyle = "#475569";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 1.3, 0, Math.PI * 2);
+  ctx.stroke();
+
+  return;
+}
 
   // MET MAST
   if (type === "metmast") {
@@ -781,6 +809,7 @@ function updatePanels() {
   if (bonusEl) {
     bonusEl.textContent = "Zona: " + currentZone;
   }
+
 
 
 
