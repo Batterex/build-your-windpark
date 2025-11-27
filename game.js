@@ -45,6 +45,7 @@ const ZONE_PROFILES = {
 };
 
 let currentZone = "desconocida";
+let simHour = 6; // empezamos a las 06:00 (día)
 
 let canvas, ctx;
 let grid = [];
@@ -810,4 +811,5 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
 
