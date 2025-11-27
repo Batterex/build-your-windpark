@@ -58,7 +58,11 @@ let player = {
   points: 200,
   windMW: 0,
   storageMWh: 0,
-  energyTodayMWh: 0,
+  // energía acumulada
+  energyTodayMWh: 0,     // total
+  windEnergyMWh: 0,
+  solarEnergyMWh: 0,
+  bessEnergyMWh: 0,
   co2Tons: 0,
 };
 
@@ -806,3 +810,4 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
