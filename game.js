@@ -49,6 +49,7 @@ let currentZone = "desconocida";
 let canvas, ctx;
 let grid = [];
 let selectedAsset = null;
+let energyPhase = 0; // para animar el "líquido" verde
 
 // Estado jugador
 let player = {
@@ -85,10 +86,17 @@ document.addEventListener("DOMContentLoaded", () => {
     for (let y = 0; y < GRID_SIZE; y++) {
       for (let x = 0; x < GRID_SIZE; x++) {
         if (!grid[y][x]) {
-          grid[y][x] = { type: "empty", owner: null, connected: false, distToSub: null };
+          grid[y][x] = {
+            type: "empty",
+            owner: null,
+            connected: false,
+            distToSub: null,
+            energized: false,
+          };
         } else {
           if (grid[y][x].connected === undefined) grid[y][x].connected = false;
           if (grid[y][x].distToSub === undefined) grid[y][x].distToSub = null;
+          if (grid[y][x].energized === undefined) grid[y][x].energized = false;
         }
       }
     }
@@ -96,7 +104,15 @@ document.addEventListener("DOMContentLoaded", () => {
     initUI();
     drawGrid();
 
+    // producción cada 5s
     setInterval(updateProduction, 5000);
+
+    // animación de energía en cables ~8 fps
+    setInterval(() => {
+      energyPhase += 0.4;
+      if (energyPhase > 1000) energyPhase = 0;
+      drawGrid();
+    }, 120);
   });
 });
 
@@ -107,6 +123,7 @@ function initGrid() {
       owner: null,
       connected: false,
       distToSub: null,
+      energized: false,
     }))
   );
 }
@@ -242,6 +259,7 @@ function handleCanvasClick(e) {
       cell.owner = null;
       cell.connected = false;
       cell.distToSub = null;
+      cell.energized = false;
 
       drawGrid();
       updatePanels();
@@ -266,6 +284,7 @@ function handleCanvasClick(e) {
   cell.owner = player.id;
   cell.connected = false;
   cell.distToSub = null;
+  cell.energized = false;
 
   applyAssetStats(selectedAsset);
 
@@ -401,11 +420,12 @@ function drawAsset(type, x, y) {
     return;
   }
 
-  // CABLE con conexiones
+  // CABLE con conexiones + energía
   if (type === "cable") {
     const { up, down, left, right } = getCableConnections(x, y);
     const half = CELL_SIZE / 2 - 1;
 
+    // base gris
     ctx.strokeStyle = "#64748b";
     ctx.lineWidth = 1.6;
     ctx.beginPath();
@@ -414,33 +434,67 @@ function drawAsset(type, x, y) {
       ctx.moveTo(cx - 2, cy);
       ctx.lineTo(cx + 2, cy);
       ctx.stroke();
-      return;
+    } else {
+      if (up) {
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx, cy - half);
+      }
+      if (down) {
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx, cy + half);
+      }
+      if (left) {
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx - half, cy);
+      }
+      if (right) {
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + half, cy);
+      }
+      ctx.stroke();
     }
 
-    if (up) {
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(cx, cy - half);
-    }
-    if (down) {
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(cx, cy + half);
-    }
-    if (left) {
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(cx - half, cy);
-    }
-    if (right) {
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(cx + half, cy);
-    }
-
-    ctx.stroke();
-
+    // nodo central
     ctx.strokeStyle = "#475569";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.arc(cx, cy, 1.3, 0, Math.PI * 2);
     ctx.stroke();
+
+    // "líquido" verde si está energizado
+    if (cell && cell.energized) {
+      ctx.save();
+      ctx.strokeStyle = "#22c55e"; // verde fosforito
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.lineDashOffset = -energyPhase * 4; // hace que se mueva
+
+      ctx.beginPath();
+      if (!up && !down && !left && !right) {
+        ctx.moveTo(cx - 2, cy);
+        ctx.lineTo(cx + 2, cy);
+      } else {
+        if (up) {
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx, cy - half);
+        }
+        if (down) {
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx, cy + half);
+        }
+        if (left) {
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx - half, cy);
+        }
+        if (right) {
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx + half, cy);
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
     return;
   }
 
@@ -538,12 +592,14 @@ function removeAssetStats(type) {
 // CONEXIONES + PRODUCCIÓN
 // =========================
 function computeConnectionsAndDistances() {
+  // reset flags
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
       if (!cell) continue;
       cell.connected = false;
       cell.distToSub = null;
+      cell.energized = false;
     }
   }
 
@@ -559,7 +615,7 @@ function computeConnectionsAndDistances() {
     [0, -1],
   ];
 
-  // subestaciones
+  // subestaciones → BFS a través de cables
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       if (grid[y][x].type === "substation") {
@@ -578,7 +634,6 @@ function computeConnectionsAndDistances() {
     }
   }
 
-  // BFS cables
   while (queue.length > 0) {
     const { x, y } = queue.shift();
     const d = dist[y][x];
@@ -596,7 +651,16 @@ function computeConnectionsAndDistances() {
     }
   }
 
-  // Turbinas conectadas?
+  // cables energizados si son alcanzables desde alguna subestación
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = grid[y][x];
+      if (!cell || cell.type !== "cable") continue;
+      cell.energized = dist[y][x] < Infinity;
+    }
+  }
+
+  // turbinas conectadas?
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
