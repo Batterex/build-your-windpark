@@ -786,19 +786,32 @@ function updateProduction() {
 // =========================
 // PANEL STATS
 // =========================
-function updatePanels() {
-  document.getElementById("stat-wind").textContent = player.windMW.toFixed(0);
-  document.getElementById("stat-storage").textContent =
-    player.storageMWh.toFixed(0);
-  document.getElementById("stat-energy").textContent =
-    player.energyTodayMWh.toFixed(0);
+  // Cabecera (energías)
+  const totalRE =
+    player.windEnergyMWh + player.solarEnergyMWh + player.bessEnergyMWh;
 
+  const windStat = document.getElementById("stat-wind-energy");
+  const solarStat = document.getElementById("stat-solar-energy");
+  const bessStat = document.getElementById("stat-bess-energy");
+  const totalStat = document.getElementById("stat-total-energy");
+  const timeStat = document.getElementById("stat-time");
+
+  if (windStat) windStat.textContent = player.windEnergyMWh.toFixed(1);
+  if (solarStat) solarStat.textContent = player.solarEnergyMWh.toFixed(1);
+  if (bessStat) bessStat.textContent = player.bessEnergyMWh.toFixed(1);
+  if (totalStat) totalStat.textContent = totalRE.toFixed(1);
+  if (timeStat) {
+    const h = simHour.toString().padStart(2, "0");
+    timeStat.textContent = `${h}:00`;
+  }
+
+  // Park stats (capacidad instalada + almacén + total energía)
   document.getElementById("park-installed").textContent =
     player.windMW.toFixed(0);
   document.getElementById("park-storage").textContent =
     player.storageMWh.toFixed(0);
   document.getElementById("park-energy").textContent =
-    player.energyTodayMWh.toFixed(0);
+    player.energyTodayMWh.toFixed(1);
   document.getElementById("park-co2").textContent =
     player.co2Tons.toFixed(2);
 
@@ -811,5 +824,7 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
+
 
 
