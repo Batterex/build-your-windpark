@@ -607,7 +607,7 @@ function removeAssetStats(type) {
 // CONEXIONES + PRODUCCIÓN
 // =========================
 function computeConnectionsAndDistances() {
-  // reset flags
+  // Reset de flags
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
@@ -630,26 +630,20 @@ function computeConnectionsAndDistances() {
     [0, -1],
   ];
 
-  // subestaciones → BFS a través de cables
+  // Tipos que "conducen" energía: parte del camino eléctrico
+  const conductive = ["cable", "turbine_3", "turbine_5", "solar", "bess_10"];
+
+  // Semillas: TODAS las subestaciones
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       if (grid[y][x].type === "substation") {
-        for (const [dx, dy] of dirs) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (!inBounds(nx, ny)) continue;
-          const ncell = grid[ny][nx];
-          if (!ncell || ncell.type !== "cable") continue;
-          if (dist[ny][nx] > 1) {
-            dist[ny][nx] = 1;
-            queue.push({ x: nx, y: ny });
-          }
-        }
+        dist[y][x] = 0;
+        queue.push({ x, y });
       }
     }
   }
 
-  // BFS cables
+  // BFS: propagamos distancias desde las subestaciones
   while (queue.length > 0) {
     const { x, y } = queue.shift();
     const d = dist[y][x];
@@ -659,48 +653,41 @@ function computeConnectionsAndDistances() {
       const ny = y + dy;
       if (!inBounds(nx, ny)) continue;
       const ncell = grid[ny][nx];
-      if (!ncell || ncell.type !== "cable") continue;
-      if (dist[ny][nx] > d + 1) {
-        dist[ny][nx] = d + 1;
+      if (!ncell || !conductive.includes(ncell.type)) continue;
+
+      const nd = d + 1;
+      if (nd < dist[ny][nx]) {
+        dist[ny][nx] = nd;
         queue.push({ x: nx, y: ny });
       }
     }
   }
 
-  // cables energizados
+  // Aplicar resultados de distancias
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
-      if (!cell || cell.type !== "cable") continue;
-      cell.energized = dist[y][x] < Infinity;
-    }
-  }
+      if (!cell) continue;
+      const d = dist[y][x];
 
-  // turbinas conectadas?
-  for (let y = 0; y < GRID_SIZE; y++) {
-    for (let x = 0; x < GRID_SIZE; x++) {
-      const cell = grid[y][x];
-      if (!cell || !cell.type.startsWith("turbine")) continue;
-
-      let bestDist = Infinity;
-
-      for (const [dx, dy] of dirs) {
-        const nx = x + dx;
-        const ny = y + dy;
-        if (!inBounds(nx, ny)) continue;
-        const ncell = grid[ny][nx];
-        if (!ncell || ncell.type !== "cable") continue;
-        if (dist[ny][nx] < bestDist) {
-          bestDist = dist[ny][nx];
-        }
+      // cables energizados si tienen distancia finita
+      if (cell.type === "cable") {
+        cell.energized = d < Infinity;
       }
 
-      if (bestDist < Infinity) {
-        cell.connected = true;
-        cell.distToSub = bestDist;
-      } else {
-        cell.connected = false;
-        cell.distToSub = null;
+      // turbinas y solares conectados si tienen camino a alguna substation
+      if (
+        cell.type === "turbine_3" ||
+        cell.type === "turbine_5" ||
+        cell.type === "solar"
+      ) {
+        if (d < Infinity) {
+          cell.connected = true;
+          cell.distToSub = d;
+        } else {
+          cell.connected = false;
+          cell.distToSub = null;
+        }
       }
     }
   }
@@ -848,4 +835,5 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
 
