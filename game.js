@@ -45,14 +45,18 @@ const ZONE_PROFILES = {
 };
 
 let currentZone = "desconocida";
-let simHour = 6; // empezamos a las 06:00 (día)
 
 let canvas, ctx;
 let grid = [];
 let selectedAsset = null;
-let energyPhase = 0; // para animar el "líquido" verde
 
-// Estado jugador
+// Fase para animar el "líquido" verde de los cables
+let energyPhase = 0;
+
+// Reloj simple de simulación
+let simHour = 6; // empezamos a las 06:00
+
+// Estado del jugador
 let player = {
   id: "local-player",
   name: "Luigi",
@@ -60,7 +64,7 @@ let player = {
   windMW: 0,
   storageMWh: 0,
   // energía acumulada
-  energyTodayMWh: 0,     // total
+  energyTodayMWh: 0, // total
   windEnergyMWh: 0,
   solarEnergyMWh: 0,
   bessEnergyMWh: 0,
@@ -112,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // producción cada 5s
     setInterval(updateProduction, 5000);
 
-    // animación de energía en cables ~8 fps
+    // animación de energía en cables
     setInterval(() => {
       energyPhase += 0.4;
       if (energyPhase > 1000) energyPhase = 0;
@@ -155,7 +159,11 @@ function initUI() {
       player.windMW = 0;
       player.storageMWh = 0;
       player.energyTodayMWh = 0;
+      player.windEnergyMWh = 0;
+      player.solarEnergyMWh = 0;
+      player.bessEnergyMWh = 0;
       player.co2Tons = 0;
+      simHour = 6;
 
       updatePanels();
       drawGrid();
@@ -179,7 +187,6 @@ function initUI() {
   });
 
   canvas.addEventListener("mouseleave", () => {
-    const hoverInfo = document.getElementById("hover-info");
     hoverInfo.classList.add("hidden");
   });
 
@@ -472,7 +479,7 @@ function drawAsset(type, x, y) {
       ctx.strokeStyle = "#22c55e"; // verde fosforito
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
-      ctx.lineDashOffset = -energyPhase * 4; // hace que se mueva
+      ctx.lineDashOffset = -energyPhase * 4;
 
       ctx.beginPath();
       if (!up && !down && !left && !right) {
@@ -639,6 +646,7 @@ function computeConnectionsAndDistances() {
     }
   }
 
+  // BFS cables
   while (queue.length > 0) {
     const { x, y } = queue.shift();
     const d = dist[y][x];
@@ -656,7 +664,7 @@ function computeConnectionsAndDistances() {
     }
   }
 
-  // cables energizados si son alcanzables desde alguna subestación
+  // cables energizados
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
@@ -723,6 +731,9 @@ function computeCableLossFactor(distToSub) {
 function updateProduction() {
   computeConnectionsAndDistances();
 
+  // avanzar reloj de simulación (1h por tick)
+  simHour = (simHour + 1) % 24;
+
   let numSubstations = 0;
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
@@ -775,9 +786,20 @@ function updateProduction() {
   const bessBonus = player.storageMWh > 0 ? 0.05 : 0;
   const produced = base * (1 + bessBonus);
 
-  player.energyTodayMWh += produced;
-  player.co2Tons += produced * 0.0003;
-  player.points += Math.round(produced / 2);
+  // de momento todo se considera energía eólica
+  const windProduced = produced;
+  const solarProduced = 0;
+  const bessProduced = 0;
+
+  player.windEnergyMWh += windProduced;
+  player.solarEnergyMWh += solarProduced;
+  player.bessEnergyMWh += bessProduced;
+
+  const totalProduced = windProduced + solarProduced + bessProduced;
+
+  player.energyTodayMWh += totalProduced;
+  player.co2Tons += totalProduced * 0.0003;
+  player.points += Math.round(totalProduced / 2);
 
   updatePanels();
   drawGrid();
@@ -786,7 +808,7 @@ function updateProduction() {
 // =========================
 // PANEL STATS
 // =========================
-  // Cabecera (energías)
+function updatePanels() {
   const totalRE =
     player.windEnergyMWh + player.solarEnergyMWh + player.bessEnergyMWh;
 
@@ -805,7 +827,6 @@ function updateProduction() {
     timeStat.textContent = `${h}:00`;
   }
 
-  // Park stats (capacidad instalada + almacén + total energía)
   document.getElementById("park-installed").textContent =
     player.windMW.toFixed(0);
   document.getElementById("park-storage").textContent =
@@ -824,7 +845,3 @@ function updateProduction() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
-
-
-
-
