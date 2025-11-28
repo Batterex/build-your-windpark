@@ -723,6 +723,7 @@ function updateProduction() {
 
   // avanzar reloj de simulación (1h por tick)
   simHour = (simHour + 1) % 24;
+  const isDay = simHour >= 6 && simHour < 18;
 
   let numSubstations = 0;
   for (let y = 0; y < GRID_SIZE; y++) {
@@ -732,55 +733,66 @@ function updateProduction() {
   }
 
   const profile = ZONE_PROFILES[currentZone] || ZONE_PROFILES.desconocida;
-  const capacityPerSub = profile.substationMW;
-  const substationCapacityMW = numSubstations * capacityPerSub;
+  const capacityPerSubstation = profile.substationMW;
+  const substationCapacityMW = numSubstations * capacityPerSubstation;
 
-  let connectedMW = 0;
+  // MW conectados de viento (solo turbinas)
+  let connectedWindMW = 0;
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
       if (!cell || !cell.connected) continue;
-      if (cell.type === "turbine_3") connectedMW += 3;
-      if (cell.type === "turbine_5") connectedMW += 5;
+      if (cell.type === "turbine_3") connectedWindMW += 3;
+      if (cell.type === "turbine_5") connectedWindMW += 5;
     }
   }
 
   let capacityFactor = 1;
-  if (substationCapacityMW > 0 && connectedMW > substationCapacityMW) {
-    capacityFactor = substationCapacityMW / connectedMW;
+  if (substationCapacityMW > 0 && connectedWindMW > substationCapacityMW) {
+    capacityFactor = substationCapacityMW / connectedWindMW;
   }
 
-  let base = 0;
+  let windProduced = 0;
+  let solarProduced = 0;
+  let bessProduced = 0; // TODO: lógica BESS
 
+  // Recorremos la malla para sumar producción
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
       if (!cell || cell.owner !== player.id || !cell.connected) continue;
 
-      let basePerTick = 0;
-      if (cell.type === "turbine_3") basePerTick = 2;
-      if (cell.type === "turbine_5") basePerTick = 4;
-      if (!basePerTick) continue;
-
-      const wakeFactor = computeWakeFactor(x, y);
       const cableFactor = computeCableLossFactor(cell.distToSub);
-      const windFactor = profile.windFactor;
 
-      const localProd =
-        basePerTick * windFactor * wakeFactor * cableFactor * capacityFactor;
+      // Turbinas → viento
+      if (cell.type === "turbine_3" || cell.type === "turbine_5") {
+        let basePerTick = 0;
+        if (cell.type === "turbine_3") basePerTick = 2;
+        if (cell.type === "turbine_5") basePerTick = 4;
 
-      base += localProd;
+        const wakeFactor = computeWakeFactor(x, y);
+        const windFactor = profile.windFactor;
+
+        const localWind =
+          basePerTick * windFactor * wakeFactor * cableFactor * capacityFactor;
+
+        windProduced += localWind;
+      }
+
+      // Solar → sólo de día
+      if (cell.type === "solar" && isDay) {
+        const basePerTickSolar = 1.5; // valor simple, ajustable
+        const solarFactor = 1.0; // en el futuro, por zona
+
+        const localSolar = basePerTickSolar * solarFactor * cableFactor;
+        solarProduced += localSolar;
+      }
+
+      // BESS como generador: TODO en siguiente iteración
     }
   }
 
-  const bessBonus = player.storageMWh > 0 ? 0.05 : 0;
-  const produced = base * (1 + bessBonus);
-
-  // de momento todo se considera energía eólica
-  const windProduced = produced;
-  const solarProduced = 0;
-  const bessProduced = 0;
-
+  // Actualizar energías acumuladas
   player.windEnergyMWh += windProduced;
   player.solarEnergyMWh += solarProduced;
   player.bessEnergyMWh += bessProduced;
@@ -794,6 +806,7 @@ function updateProduction() {
   updatePanels();
   drawGrid();
 }
+
 
 // =========================
 // PANEL STATS
@@ -835,5 +848,6 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
 
 
