@@ -538,28 +538,31 @@ function drawAsset(type, x, y) {
   }
 
   // SOLAR
-  if (type === "solar") {
-    ctx.strokeStyle = "#22c55e";
-    ctx.lineWidth = 1.4;
+if (type === "solar") {
+  const isConnected = cell && cell.connected;
 
-    ctx.beginPath();
-    ctx.moveTo(cx - 7, cy + 2);
-    ctx.lineTo(cx + 7, cy - 2);
-    ctx.lineTo(cx + 5, cy - 7);
-    ctx.lineTo(cx - 9, cy - 3);
-    ctx.closePath();
-    ctx.stroke();
+  // Contorno del panel: amarillo claro si NO conectado, verde si conectado
+  ctx.strokeStyle = isConnected ? "#22c55e" : "#facc15";
+  ctx.lineWidth = 1.4;
 
-    ctx.strokeStyle = "#94a3b8";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(cx - 6, cy + 3);
-    ctx.lineTo(cx - 6, cy + 7);
-    ctx.moveTo(cx + 4, cy + 1);
-    ctx.lineTo(cx + 4, cy + 7);
-    ctx.stroke();
-    return;
-  }
+  ctx.beginPath();
+  ctx.moveTo(cx - 7, cy + 2);
+  ctx.lineTo(cx + 7, cy - 2);
+  ctx.lineTo(cx + 5, cy - 7);
+  ctx.lineTo(cx - 9, cy - 3);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Patas: verdes claras si conectado, amarillas claras si no
+  ctx.strokeStyle = isConnected ? "#bbf7d0" : "#fde68a";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 6, cy + 3);
+  ctx.lineTo(cx - 6, cy + 7);
+  ctx.moveTo(cx + 4, cy + 1);
+  ctx.lineTo(cx + 4, cy + 7);
+  ctx.stroke();
+  return;
 }
 
 // =========================
@@ -845,3 +848,4 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
