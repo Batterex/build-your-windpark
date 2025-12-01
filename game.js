@@ -381,6 +381,21 @@ function handleCanvasClick(e) {
   // Construcción normal
   if (cell.type !== "empty") return;
 
+  // si es turbina o solar, comprobar terreno
+  const terrType = terrain[y][x]?.type || "plain";
+  if (
+    (selectedAsset === "turbine_3" ||
+      selectedAsset === "turbine_5" ||
+      selectedAsset === "solar") &&
+    isForbiddenTerrainForGenerator(terrType)
+  ) {
+    alert(
+      "No puedes instalar este generador en este tipo de terreno.\n" +
+        "Prueba en una celda más llana o adecuada."
+    );
+    return;
+  }
+
   const cost = getAssetCost(selectedAsset);
   if (player.points < cost) {
     alert("Not enough points!");
@@ -940,6 +955,7 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
 
 
 
