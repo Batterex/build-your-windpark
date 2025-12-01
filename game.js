@@ -897,15 +897,23 @@ function updateProduction() {
       }
 
 
-      // solar (solo de día)
-      if (cell.type === "solar" && isDay) {
-        const basePerTickSolar = 1.5; // valor simple
-        const solarFactor = 1.0;
-        const localSolar = basePerTickSolar * solarFactor * cableFactor;
-        solarProduced += localSolar;
-      }
-    }
+// SOLAR (0,5 MW por celda, solo de día)
+if (cell.type === "solar") {
+  const baseSolarMW = 0.5; // potencia instalada solar por celda
+
+  if (isDay && cell.connected) {
+    // de día produce
+    const solarFactorZone = 1.0; // luego lo afinamos por zona
+    const solarFactorTerrain = 1.0; // también podemos ajustarlo luego
+
+    // producción solar en este tick:
+    // producción = MW * factores * eficiencia por cable
+    const localSolar =
+      baseSolarMW * solarFactorZone * solarFactorTerrain * cableFactor;
+
+    solarProduced += localSolar;
   }
+}
 
   player.windEnergyMWh += windProduced;
   player.solarEnergyMWh += solarProduced;
@@ -963,6 +971,7 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
 
 
 
