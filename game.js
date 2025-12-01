@@ -429,6 +429,9 @@ function drawGrid() {
 
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
+      // fondo de orografía
+      drawTerrainBackground(x, y);
+
       ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
       drawAsset(grid[y][x].type, x, y);
     }
@@ -937,6 +940,7 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
 
 
 
