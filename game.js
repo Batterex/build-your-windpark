@@ -155,6 +155,7 @@ function initUI() {
 
       await resetGridOnServer();
       initGrid();
+      generateTerrainForZone();
 
       player = {
         id: "local-player",
@@ -936,6 +937,7 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
 
 
 
