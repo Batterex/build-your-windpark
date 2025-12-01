@@ -252,6 +252,95 @@ function getCableConnections(x, y) {
 }
 
 // =========================
+// OROGRAFÍA
+// =========================
+
+function generateTerrainForZone() {
+  terrain = Array.from({ length: GRID_SIZE }, () =>
+    Array.from({ length: GRID_SIZE }, () => ({
+      type: "plain", // plain, hilly, mountain, water
+    }))
+  );
+
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const r = Math.random();
+      let t = "plain";
+
+      if (currentZone === "templado_norte" || currentZone === "templado_sur") {
+        if (r < 0.65) t = "plain";
+        else if (r < 0.85) t = "hilly";
+        else if (r < 0.95) t = "mountain";
+        else t = "water";
+      } else if (currentZone === "tropical") {
+        if (r < 0.5) t = "plain";
+        else if (r < 0.7) t = "hilly";
+        else if (r < 0.75) t = "mountain";
+        else t = "water";
+      } else if (currentZone === "polar_norte" || currentZone === "polar_sur") {
+        if (r < 0.4) t = "plain";
+        else if (r < 0.7) t = "mountain";
+        else t = "water";
+      } else {
+        // desconocida
+        if (r < 0.7) t = "plain";
+        else if (r < 0.9) t = "hilly";
+        else t = "mountain";
+      }
+
+      terrain[y][x].type = t;
+    }
+  }
+}
+
+// algunas celdas NO permiten turbinas/solar
+function isForbiddenTerrainForGenerator(terrainType) {
+  // por ahora: no permitimos turbinas/solar en "water" ni "mountain" (demasiado empinado)
+  return terrainType === "water" || terrainType === "mountain";
+}
+
+// factor de viento extra según terreno
+function getTerrainWindFactor(terrainType) {
+  switch (terrainType) {
+    case "plain":
+      return 1.0;
+    case "hilly":
+      return 1.05;
+    case "mountain":
+      return 1.15; // mejor viento en montes
+    case "water":
+      return 1.1;  // offshore suele ser bueno
+    default:
+      return 1.0;
+  }
+}
+
+// dibujar fondo de terreno (muy sutil)
+function drawTerrainBackground(x, y) {
+  if (!terrain[y] || !terrain[y][x]) return;
+  const t = terrain[y][x].type;
+
+  const baseX = x * CELL_SIZE;
+  const baseY = y * CELL_SIZE;
+
+  if (t === "plain") {
+    return; // nada especial
+  }
+
+  if (t === "hilly") {
+    ctx.fillStyle = "rgba(22, 163, 74, 0.10)"; // ligero verde
+  } else if (t === "mountain") {
+    ctx.fillStyle = "rgba(30, 64, 175, 0.16)"; // azulado fuerte
+  } else if (t === "water") {
+    ctx.fillStyle = "rgba(15, 118, 110, 0.20)"; // turquesa
+  } else {
+    return;
+  }
+
+  ctx.fillRect(baseX, baseY, CELL_SIZE, CELL_SIZE);
+}
+
+// =========================
 // CLICK / CONSTRUCCIÓN
 // =========================
 function handleCanvasClick(e) {
@@ -843,4 +932,5 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
 
