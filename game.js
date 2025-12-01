@@ -882,12 +882,20 @@ function updateProduction() {
 
         const wakeFactor = computeWakeFactor(x, y);
         const windFactor = profile.windFactor;
+        const terrType = terrain[y][x]?.type || "plain";
+        const terrainFactor = getTerrainWindFactor(terrType);
 
         const localWind =
-          basePerTick * windFactor * wakeFactor * cableFactor * capacityFactor;
+          basePerTick *
+          windFactor *
+          terrainFactor *
+          wakeFactor *
+          cableFactor *
+          capacityFactor;
 
         windProduced += localWind;
       }
+
 
       // solar (solo de día)
       if (cell.type === "solar" && isDay) {
@@ -955,6 +963,7 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
 
 
 
