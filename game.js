@@ -435,24 +435,22 @@ function handleCanvasClick(e) {
 // DIBUJO GRID + ASSETS
 // =========================
 function drawGrid() {
+  // Fondo general
   ctx.fillStyle = "#020617";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.save();
-  ctx.strokeStyle = "rgba(15,23,42,0.6)";
-  ctx.lineWidth = 0.4;
-
+  // Recorremos todas las celdas
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
-      // fondo de orografía
-      drawTerrainBackground(x, y);
+      // Fondo orográfico por celda (agua, montaña, colinas...)
+      if (typeof drawTerrainBackground === "function") {
+        drawTerrainBackground(x, y);
+      }
 
-      ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      // Dibujar el asset (turbina, cable, solar, etc.)
       drawAsset(grid[y][x].type, x, y);
     }
   }
-
-  ctx.restore();
 }
 
 function drawAsset(type, x, y) {
@@ -971,6 +969,7 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
 
 
 
