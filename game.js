@@ -4,7 +4,7 @@
 const GRID_SIZE = 40;
 const CELL_SIZE = 20;
 
-// Perfiles de zona (ajustan viento, capacidad, pérdidas, etc.)
+// Perfiles de zona
 const ZONE_PROFILES = {
   polar_norte: {
     windFactor: 1.2,
@@ -49,9 +49,11 @@ let currentZone = "desconocida";
 let canvas, ctx;
 let grid = [];
 let selectedAsset = null;
-let energyPhase = 0; // para animar el "líquido" verde
-let simHour = 6; // reloj de simulación (06:00 de inicio)
-let terrain = []; // misma forma que grid, guarda tipo de terreno por celda
+let energyPhase = 0; // animación cables
+let simHour = 6; // reloj (06:00)
+
+// Matriz de orografía
+let terrain = [];
 
 // Estado del jugador
 let player = {
@@ -60,7 +62,6 @@ let player = {
   points: 200,
   windMW: 0,
   storageMWh: 0,
-  // energía acumulada
   energyTodayMWh: 0, // total
   windEnergyMWh: 0,
   solarEnergyMWh: 0,
@@ -111,13 +112,8 @@ document.addEventListener("DOMContentLoaded", () => {
     initUI();
     drawGrid();
 
-    initUI();
-    drawGrid();
-
-    // producción cada 5s
     setInterval(updateProduction, 5000);
 
-    // animación de energía en cables ~8 FPS
     setInterval(() => {
       energyPhase += 0.4;
       if (energyPhase > 1000) energyPhase = 0;
@@ -138,15 +134,94 @@ function initGrid() {
   );
 }
 
+// =========================
+// OROGRAFÍA
+// =========================
+function generateTerrainForZone() {
+  terrain = Array.from({ length: GRID_SIZE }, () =>
+    Array.from({ length: GRID_SIZE }, () => ({ type: "plain" }))
+  );
+
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const r = Math.random();
+      let t = "plain";
+
+      if (currentZone === "templado_norte" || currentZone === "templado_sur") {
+        if (r < 0.65) t = "plain";
+        else if (r < 0.85) t = "hilly";
+        else if (r < 0.95) t = "mountain";
+        else t = "water";
+      } else if (currentZone === "tropical") {
+        if (r < 0.5) t = "plain";
+        else if (r < 0.7) t = "hilly";
+        else if (r < 0.75) t = "mountain";
+        else t = "water";
+      } else if (currentZone === "polar_norte" || currentZone === "polar_sur") {
+        if (r < 0.4) t = "plain";
+        else if (r < 0.7) t = "mountain";
+        else t = "water";
+      } else {
+        if (r < 0.7) t = "plain";
+        else if (r < 0.9) t = "hilly";
+        else t = "mountain";
+      }
+
+      terrain[y][x].type = t;
+    }
+  }
+}
+
+function isForbiddenTerrainForGenerator(terrainType) {
+  return terrainType === "water" || terrainType === "mountain";
+}
+
+function getTerrainWindFactor(terrainType) {
+  switch (terrainType) {
+    case "plain":
+      return 1.0;
+    case "hilly":
+      return 1.05;
+    case "mountain":
+      return 1.15;
+    case "water":
+      return 1.1;
+    default:
+      return 1.0;
+  }
+}
+
+function drawTerrainBackground(x, y) {
+  if (!terrain[y] || !terrain[y][x]) return;
+  const t = terrain[y][x].type;
+  const baseX = x * CELL_SIZE;
+  const baseY = y * CELL_SIZE;
+
+  if (t === "plain") return;
+
+  if (t === "hilly") {
+    ctx.fillStyle = "rgba(22, 163, 74, 0.10)";
+  } else if (t === "mountain") {
+    ctx.fillStyle = "rgba(30, 64, 175, 0.16)";
+  } else if (t === "water") {
+    ctx.fillStyle = "rgba(15, 118, 110, 0.20)";
+  } else {
+    return;
+  }
+
+  ctx.fillRect(baseX, baseY, CELL_SIZE, CELL_SIZE);
+}
+
+// =========================
+// UI
+// =========================
 function initUI() {
-  // botones de construcción
   document.querySelectorAll(".build-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       selectedAsset = btn.dataset.asset;
     });
   });
 
-  // botón Reset park
   const resetBtn = document.getElementById("btn-reset-park");
   if (resetBtn) {
     resetBtn.addEventListener("click", async () => {
@@ -213,7 +288,6 @@ function inBounds(x, y) {
   return x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE;
 }
 
-// ¿Tiene al menos un cable o subestación al lado?
 function hasNeighborConnection(x, y) {
   const dirs = [
     [1, 0],
@@ -232,7 +306,6 @@ function hasNeighborConnection(x, y) {
   return false;
 }
 
-// Saber hacia dónde está conectado el cable (para dibujarlo)
 function getCableConnections(x, y) {
   const dirs = { up: false, down: false, left: false, right: false };
   const conductive = ["cable", "substation", "turbine_3", "turbine_5", "solar", "bess_10"];
@@ -257,95 +330,6 @@ function getCableConnections(x, y) {
 }
 
 // =========================
-// OROGRAFÍA
-// =========================
-
-function generateTerrainForZone() {
-  terrain = Array.from({ length: GRID_SIZE }, () =>
-    Array.from({ length: GRID_SIZE }, () => ({
-      type: "plain", // plain, hilly, mountain, water
-    }))
-  );
-
-  for (let y = 0; y < GRID_SIZE; y++) {
-    for (let x = 0; x < GRID_SIZE; x++) {
-      const r = Math.random();
-      let t = "plain";
-
-      if (currentZone === "templado_norte" || currentZone === "templado_sur") {
-        if (r < 0.65) t = "plain";
-        else if (r < 0.85) t = "hilly";
-        else if (r < 0.95) t = "mountain";
-        else t = "water";
-      } else if (currentZone === "tropical") {
-        if (r < 0.5) t = "plain";
-        else if (r < 0.7) t = "hilly";
-        else if (r < 0.75) t = "mountain";
-        else t = "water";
-      } else if (currentZone === "polar_norte" || currentZone === "polar_sur") {
-        if (r < 0.4) t = "plain";
-        else if (r < 0.7) t = "mountain";
-        else t = "water";
-      } else {
-        // desconocida
-        if (r < 0.7) t = "plain";
-        else if (r < 0.9) t = "hilly";
-        else t = "mountain";
-      }
-
-      terrain[y][x].type = t;
-    }
-  }
-}
-
-// algunas celdas NO permiten turbinas/solar
-function isForbiddenTerrainForGenerator(terrainType) {
-  // por ahora: no permitimos turbinas/solar en "water" ni "mountain" (demasiado empinado)
-  return terrainType === "water" || terrainType === "mountain";
-}
-
-// factor de viento extra según terreno
-function getTerrainWindFactor(terrainType) {
-  switch (terrainType) {
-    case "plain":
-      return 1.0;
-    case "hilly":
-      return 1.05;
-    case "mountain":
-      return 1.15; // mejor viento en montes
-    case "water":
-      return 1.1;  // offshore suele ser bueno
-    default:
-      return 1.0;
-  }
-}
-
-// dibujar fondo de terreno (muy sutil)
-function drawTerrainBackground(x, y) {
-  if (!terrain[y] || !terrain[y][x]) return;
-  const t = terrain[y][x].type;
-
-  const baseX = x * CELL_SIZE;
-  const baseY = y * CELL_SIZE;
-
-  if (t === "plain") {
-    return; // nada especial
-  }
-
-  if (t === "hilly") {
-    ctx.fillStyle = "rgba(22, 163, 74, 0.10)"; // ligero verde
-  } else if (t === "mountain") {
-    ctx.fillStyle = "rgba(30, 64, 175, 0.16)"; // azulado fuerte
-  } else if (t === "water") {
-    ctx.fillStyle = "rgba(15, 118, 110, 0.20)"; // turquesa
-  } else {
-    return;
-  }
-
-  ctx.fillRect(baseX, baseY, CELL_SIZE, CELL_SIZE);
-}
-
-// =========================
 // CLICK / CONSTRUCCIÓN
 // =========================
 function handleCanvasClick(e) {
@@ -355,13 +339,12 @@ function handleCanvasClick(e) {
 
   const cell = grid[y][x];
 
-  // MODO BULLDOZER
+  // Bulldozer
   if (selectedAsset === "bulldozer") {
     if (cell.type !== "empty") {
       const originalCost = getAssetCost(cell.type);
       const refund = Math.round(originalCost / 2);
       player.points += refund;
-
       removeAssetStats(cell.type);
 
       cell.type = "empty";
@@ -381,7 +364,6 @@ function handleCanvasClick(e) {
   // Construcción normal
   if (cell.type !== "empty") return;
 
-  // si es turbina o solar, comprobar terreno
   const terrType = terrain[y][x]?.type || "plain";
   if (
     (selectedAsset === "turbine_3" ||
@@ -412,7 +394,6 @@ function handleCanvasClick(e) {
 
   applyAssetStats(selectedAsset);
 
-  // Aviso si es generador y no tiene conexión mínima
   if (
     (selectedAsset === "turbine_3" ||
       selectedAsset === "turbine_5" ||
@@ -432,22 +413,15 @@ function handleCanvasClick(e) {
 }
 
 // =========================
-// DIBUJO GRID + ASSETS
+// DIBUJO
 // =========================
 function drawGrid() {
-  // Fondo general
   ctx.fillStyle = "#020617";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Recorremos todas las celdas
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
-      // Fondo orográfico por celda (agua, montaña, colinas...)
-      if (typeof drawTerrainBackground === "function") {
-        drawTerrainBackground(x, y);
-      }
-
-      // Dibujar el asset (turbina, cable, solar, etc.)
+      drawTerrainBackground(x, y);
       drawAsset(grid[y][x].type, x, y);
     }
   }
@@ -545,12 +519,11 @@ function drawAsset(type, x, y) {
     return;
   }
 
-  // CABLE con conexiones + energía
+  // CABLE
   if (type === "cable") {
     const { up, down, left, right } = getCableConnections(x, y);
     const half = CELL_SIZE / 2 - 1;
 
-    // base gris
     ctx.strokeStyle = "#64748b";
     ctx.lineWidth = 1.6;
     ctx.beginPath();
@@ -579,17 +552,15 @@ function drawAsset(type, x, y) {
       ctx.stroke();
     }
 
-    // nodo central
     ctx.strokeStyle = "#475569";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.arc(cx, cy, 1.3, 0, Math.PI * 2);
     ctx.stroke();
 
-    // "líquido" verde si está energizado
     if (cell && cell.energized) {
       ctx.save();
-      ctx.strokeStyle = "#22c55e"; // verde fosforito
+      ctx.strokeStyle = "#22c55e";
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
       ctx.lineDashOffset = -energyPhase * 4;
@@ -619,7 +590,6 @@ function drawAsset(type, x, y) {
       ctx.stroke();
       ctx.restore();
     }
-
     return;
   }
 
@@ -650,7 +620,7 @@ function drawAsset(type, x, y) {
     return;
   }
 
-  // SOLAR (amarillo sin conexión, verde conectado)
+  // SOLAR
   if (type === "solar") {
     const isConnected = cell && cell.connected;
 
@@ -705,7 +675,7 @@ function applyAssetStats(type) {
   if (type === "turbine_3") player.windMW += 3;
   if (type === "turbine_5") player.windMW += 5;
   if (type === "bess_10") player.storageMWh += 10;
-  if (type === "solar") player.windMW += 1; // simplificado
+  if (type === "solar") player.windMW += 1;
 }
 
 function removeAssetStats(type) {
@@ -719,7 +689,6 @@ function removeAssetStats(type) {
 // CONEXIONES + PRODUCCIÓN
 // =========================
 function computeConnectionsAndDistances() {
-  // Reset flags
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
@@ -741,10 +710,9 @@ function computeConnectionsAndDistances() {
     [0, 1],
     [0, -1],
   ];
-
   const conductive = ["cable", "turbine_3", "turbine_5", "solar", "bess_10"];
 
-  // Semillas: todas las subestaciones
+  // semillas: subestaciones
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       if (grid[y][x].type === "substation") {
@@ -754,7 +722,6 @@ function computeConnectionsAndDistances() {
     }
   }
 
-  // BFS para propagar distancias
   while (queue.length > 0) {
     const { x, y } = queue.shift();
     const d = dist[y][x];
@@ -774,7 +741,6 @@ function computeConnectionsAndDistances() {
     }
   }
 
-  // Aplicar distancias
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
@@ -822,7 +788,7 @@ function computeCableLossFactor(distToSub) {
   if (distToSub == null) return 1;
   const profile = ZONE_PROFILES[currentZone] || ZONE_PROFILES.desconocida;
   const lossPerPixel = profile.cableLossPerPixel;
-  const maxLoss = profile.maxLoss ?? profile.maxCableLoss;
+  const maxLoss = profile.maxCableLoss;
   const loss = Math.min(maxLoss, distToSub * lossPerPixel);
   return 1 - loss;
 }
@@ -830,7 +796,6 @@ function computeCableLossFactor(distToSub) {
 function updateProduction() {
   computeConnectionsAndDistances();
 
-  // avanzar reloj (1h por tick)
   simHour = (simHour + 1) % 24;
   const isDay = simHour >= 6 && simHour < 18;
 
@@ -842,10 +807,9 @@ function updateProduction() {
   }
 
   const profile = ZONE_PROFILES[currentZone] || ZONE_PROFILES.desconocida;
-  const capacityPerSub = profile.substationMW;
-  const substationCapacityMW = numSubstations * capacityPerSub;
+  const capacityPerSubstation = profile.substationMW;
+  const substationCapacityMW = numSubstations * capacityPerSubstation;
 
-  // MW de viento conectados (solo turbinas)
   let connectedWindMW = 0;
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
@@ -863,7 +827,7 @@ function updateProduction() {
 
   let windProduced = 0;
   let solarProduced = 0;
-  let bessProduced = 0; // pendiente de implementar como generador
+  let bessProduced = 0; // aún no implementado
 
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
@@ -871,8 +835,8 @@ function updateProduction() {
       if (!cell || cell.owner !== player.id || !cell.connected) continue;
 
       const cableFactor = computeCableLossFactor(cell.distToSub);
+      const terrType = terrain[y][x]?.type || "plain";
 
-      // viento (turbinas)
       if (cell.type === "turbine_3" || cell.type === "turbine_5") {
         let basePerTick = 0;
         if (cell.type === "turbine_3") basePerTick = 2;
@@ -880,7 +844,6 @@ function updateProduction() {
 
         const wakeFactor = computeWakeFactor(x, y);
         const windFactor = profile.windFactor;
-        const terrType = terrain[y][x]?.type || "plain";
         const terrainFactor = getTerrainWindFactor(terrType);
 
         const localWind =
@@ -894,24 +857,17 @@ function updateProduction() {
         windProduced += localWind;
       }
 
+      if (cell.type === "solar" && isDay) {
+        const baseSolarMW = 0.5; // 0.5 MW por celda
+        const solarFactorZone = 1.0;
+        const solarFactorTerrain = 1.0;
+        const localSolar =
+          baseSolarMW * solarFactorZone * solarFactorTerrain * cableFactor;
 
-// SOLAR (0,5 MW por celda, solo de día)
-if (cell.type === "solar") {
-  const baseSolarMW = 0.5; // potencia instalada solar por celda
-
-  if (isDay && cell.connected) {
-    // de día produce
-    const solarFactorZone = 1.0; // luego lo afinamos por zona
-    const solarFactorTerrain = 1.0; // también podemos ajustarlo luego
-
-    // producción solar en este tick:
-    // producción = MW * factores * eficiencia por cable
-    const localSolar =
-      baseSolarMW * solarFactorZone * solarFactorTerrain * cableFactor;
-
-    solarProduced += localSolar;
+        solarProduced += localSolar;
+      }
+    }
   }
-}
 
   player.windEnergyMWh += windProduced;
   player.solarEnergyMWh += solarProduced;
@@ -949,7 +905,6 @@ function updatePanels() {
     timeStat.textContent = `${h}:00`;
   }
 
-  // Park stats
   document.getElementById("park-installed").textContent =
     player.windMW.toFixed(0);
   document.getElementById("park-storage").textContent =
@@ -959,7 +914,6 @@ function updatePanels() {
   document.getElementById("park-co2").textContent =
     player.co2Tons.toFixed(2);
 
-  // Panel de jugador
   document.getElementById("player-name").textContent = player.name;
   document.getElementById("player-points").textContent =
     player.points.toFixed(0);
@@ -969,12 +923,3 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
-
-
-
-
-
-
-
-
-
