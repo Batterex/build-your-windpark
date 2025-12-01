@@ -51,6 +51,7 @@ let grid = [];
 let selectedAsset = null;
 let energyPhase = 0; // para animar el "líquido" verde
 let simHour = 6; // reloj de simulación (06:00 de inicio)
+let terrain = []; // misma forma que grid, guarda tipo de terreno por celda
 
 // Estado del jugador
 let player = {
@@ -842,3 +843,4 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
