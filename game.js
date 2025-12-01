@@ -107,6 +107,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    generateTerrainForZone();
+    initUI();
+    drawGrid();
+
     initUI();
     drawGrid();
 
@@ -932,5 +936,6 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
 
 
