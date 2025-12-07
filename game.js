@@ -935,7 +935,9 @@ function updateProduction() {
 function updatePanels() {
   const totalRE =
     player.windEnergyMWh + player.solarEnergyMWh + player.bessEnergyMWh;
-
+  
+  const levelInfo = getLevelInfo(totalRE);
+  
   const windStat = document.getElementById("stat-wind-energy");
   const solarStat = document.getElementById("stat-solar-energy");
   const bessStat = document.getElementById("stat-bess-energy");
@@ -988,6 +990,7 @@ function updatePanels() {
     bonusEl.textContent = `Zona: ${zoneText} – ${zoneBonus}`;
   }
 }
+
 
 
 
