@@ -217,6 +217,48 @@ function drawTerrainBackground(x, y) {
 }
 
 // =========================
+// SISTEMA DE NIVELES
+// =========================
+// Usamos el Total RE acumulado (player.energyTodayMWh) para definir el nivel
+
+function getLevelInfo(totalRE) {
+  // thresholds en MWh (ajustables)
+  if (totalRE < 50) {
+    return {
+      level: 1,
+      label: "Junior Engineer",
+      bonusDesc: "Sin bonus. Aprende a construir tu primera central.",
+    };
+  }
+  if (totalRE < 200) {
+    return {
+      level: 2,
+      label: "Plant Engineer",
+      bonusDesc: "+5% eficiencia eólica (pronto lo aplicaremos en la física).",
+    };
+  }
+  if (totalRE < 500) {
+    return {
+      level: 3,
+      label: "Senior Engineer",
+      bonusDesc: "-5% pérdidas en cableado (se activará más adelante).",
+    };
+  }
+  if (totalRE < 1000) {
+    return {
+      level: 4,
+      label: "Grid Specialist",
+      bonusDesc: "+10% capacidad de subestaciones.",
+    };
+  }
+  return {
+    level: 5,
+    label: "System Architect",
+    bonusDesc: "Acceso a optimizaciones avanzadas de la planta.",
+  };
+}
+
+// =========================
 // UI
 // =========================
 function initUI() {
@@ -946,6 +988,7 @@ function updatePanels() {
     bonusEl.textContent = `Zona: ${zoneText} – ${zoneBonus}`;
   }
 }
+
 
 
 
