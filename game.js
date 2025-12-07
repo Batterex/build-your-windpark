@@ -909,8 +909,28 @@ function updatePanels() {
 
   const bonusEl = document.getElementById("player-bonus");
   if (bonusEl) {
-    bonusEl.textContent = "Zona: " + currentZone;
+    let zoneText = currentZone;
+    if (currentZone === "templado_norte" || currentZone === "templado_sur") {
+      zoneText = "Temperate (templado)";
+    } else if (currentZone === "tropical") {
+      zoneText = "Tropical";
+    } else if (currentZone === "polar_norte" || currentZone === "polar_sur") {
+      zoneText = "Polar";
+    }
+
+    // descripción simple de bonus por zona
+    let zoneBonus = "";
+    if (currentZone === "tropical") {
+      zoneBonus = "Buen solar, viento medio.";
+    } else if (currentZone === "polar_norte" || currentZone === "polar_sur") {
+      zoneBonus = "Viento fuerte, sol bajo.";
+    } else {
+      zoneBonus = "Condiciones equilibradas.";
+    }
+
+    bonusEl.textContent = `Zona: ${zoneText} – ${zoneBonus}`;
   }
 }
+
 
 
