@@ -120,3 +120,32 @@ body {
 .hidden {
   display: none;
 }
+
+.mini-btn {
+  font-size: 11px;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border: 1px solid #1f2937;
+  background: #020617;
+  color: #e5e7eb;
+  cursor: pointer;
+}
+.mini-btn:hover {
+  background: #111827;
+}
+.level-help {
+  margin-top: 6px;
+  font-size: 11px;
+  text-align: left;
+}
+.level-help summary {
+  cursor: pointer;
+  color: #a5b4fc;
+}
+.level-help ul {
+  margin: 4px 0 0 18px;
+  padding: 0;
+}
+.level-help li {
+  margin-bottom: 2px;
+}
