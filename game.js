@@ -226,32 +226,17 @@ function initUI() {
     });
   });
 
-  const resetBtn = document.getElementById("btn-reset-park");
-  if (resetBtn) {
-    resetBtn.addEventListener("click", async () => {
-      const ok = confirm("¿Seguro que quieres resetear todo el parque?");
-      if (!ok) return;
-
-      await resetGridOnServer();
-      initGrid();
-      generateTerrainForZone();
-
-      player = {
-        id: "local-player",
-        name: "Luigi",
-        points: 200,
-        windMW: 0,
-        storageMWh: 0,
-        energyTodayMWh: 0,
-        windEnergyMWh: 0,
-        solarEnergyMWh: 0,
-        bessEnergyMWh: 0,
-        co2Tons: 0,
-      };
-      simHour = 6;
-
+  // Botón para cambiar el nombre del jugador
+  const changeNameBtn = document.getElementById("btn-change-name");
+  if (changeNameBtn) {
+    changeNameBtn.addEventListener("click", () => {
+      const newName = prompt("Escribe tu nombre de jugador:", player.name || "Jugador");
+      if (!newName) return;
+      player.name = newName;
+      if (window.localStorage) {
+        window.localStorage.setItem("byrp_player_name", newName);
+      }
       updatePanels();
-      drawGrid();
     });
   }
 
@@ -927,4 +912,5 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
 
