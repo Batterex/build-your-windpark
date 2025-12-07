@@ -56,13 +56,17 @@ let simHour = 6; // reloj (06:00)
 let terrain = [];
 
 // Estado del jugador
+const storedName = window.localStorage
+  ? window.localStorage.getItem("byrp_player_name")
+  : null;
+
 let player = {
   id: "local-player",
-  name: "Luigi",
+  name: storedName || "Luigi",
   points: 200,
   windMW: 0,
   storageMWh: 0,
-  energyTodayMWh: 0, // total
+  energyTodayMWh: 0,
   windEnergyMWh: 0,
   solarEnergyMWh: 0,
   bessEnergyMWh: 0,
@@ -923,3 +927,4 @@ function updatePanels() {
     bonusEl.textContent = "Zona: " + currentZone;
   }
 }
+
