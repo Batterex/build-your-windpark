@@ -263,6 +263,21 @@ function initUI() {
   updatePanels();
 }
 
+  // Placeholders para Leaderboard y Login/Signup
+  const leaderBtn = document.getElementById("btn-leaderboard");
+  if (leaderBtn) {
+    leaderBtn.addEventListener("click", () => {
+      alert("Leaderboard aún no está disponible.\n\nEn el futuro verás aquí el ranking de centrales más eficientes.");
+    });
+  }
+
+  const loginBtn = document.getElementById("btn-login");
+  if (loginBtn) {
+    loginBtn.addEventListener("click", () => {
+      alert("Login / Signup aún no está disponible.\n\nMás adelante podrás guardar tus centrales y competir con otros jugadores.");
+    });
+  }
+
 // =========================
 // HELPERS
 // =========================
@@ -931,6 +946,7 @@ function updatePanels() {
     bonusEl.textContent = `Zona: ${zoneText} – ${zoneBonus}`;
   }
 }
+
 
 
 
