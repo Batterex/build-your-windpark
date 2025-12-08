@@ -352,6 +352,19 @@ function handleCanvasClick(e) {
   // Si ya está ocupado, nada
   if (cell.type !== "empty") return;
 
+    // Si queremos construir una turbina o un solar y YA hay alguna sub saturada, no dejamos
+  if (
+    (selectedAsset === "turbine_3" ||
+      selectedAsset === "turbine_5" ||
+      selectedAsset === "solar") &&
+    isAnySubstationOverloaded()
+  ) {
+    alert(
+      "Subestación saturada.\n\nNo puedes conectar más generación a la red actual.\nInstala otra subestación o redistribuye tu planta."
+    );
+    return;
+  }
+
   const cost = getAssetCost(selectedAsset);
   if (player.points < cost) {
     alert("No tienes puntos suficientes.");
@@ -1017,6 +1030,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
