@@ -412,6 +412,23 @@ function handleCanvasClick(e) {
     );
   }
 
+  // AVISO DE SUBESTACIÓN SATURADA
+  if (
+    selectedAsset === "turbine_3" ||
+    selectedAsset === "turbine_5" ||
+    selectedAsset === "solar"
+  ) {
+    const totalMW = getTotalConnectedGenerationMW();
+    const capacityMW = getSubstationCapacityMW();
+    if (capacityMW > 0 && totalMW > capacityMW) {
+      alert(
+        "ATENCIÓN: La(s) subestación(es) han alcanzado su capacidad máxima.\n\n" +
+          "Parte de la generación se está limitando (curtailment).\n" +
+          "Considera añadir otra subestación o rediseñar el cableado."
+      );
+    }
+  }
+
   drawGrid();
   updatePanels();
 
@@ -1133,6 +1150,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
