@@ -150,6 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // después de tener grid listo
     initTerrain(tileX, tileY);
     initUI();
     drawGrid();
@@ -1004,6 +1005,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
