@@ -45,24 +45,62 @@ const ZONE_PROFILES = {
 };
 
 let currentZone = "desconocida";
-
 let canvas, ctx;
 let grid = [];
 let selectedAsset = null;
-let energyPhase = 0; // animación cables
-let simHour = 6; // reloj (06:00)
+let energyPhase = 0; // para animar energía en cables
+let simHour = 6; // hora simulada
 
-// Matriz de orografía
-let terrain = [];
+// =========================
+// SISTEMA DE NIVELES
+// =========================
+function getLevelInfo(totalRE) {
+  // Umbrales en MWh (ajustables)
+  if (totalRE < 50) {
+    return {
+      level: 1,
+      label: "Junior Engineer",
+      bonusDesc: "Sin bonus. Aprende a diseñar tu primera central.",
+    };
+  }
+  if (totalRE < 200) {
+    return {
+      level: 2,
+      label: "Plant Engineer",
+      bonusDesc: "+5% eficiencia eólica (se aplicará en futuras versiones).",
+    };
+  }
+  if (totalRE < 500) {
+    return {
+      level: 3,
+      label: "Senior Engineer",
+      bonusDesc: "-5% pérdidas en cableado (se aplicará más adelante).",
+    };
+  }
+  if (totalRE < 1000) {
+    return {
+      level: 4,
+      label: "Grid Specialist",
+      bonusDesc: "+10% capacidad en subestaciones.",
+    };
+  }
+  return {
+    level: 5,
+    label: "System Architect",
+    bonusDesc: "Acceso a optimizaciones avanzadas de la planta.",
+  };
+}
 
-// Estado del jugador
-const storedName = window.localStorage
-  ? window.localStorage.getItem("byrp_player_name")
-  : null;
+// =========================
+// ESTADO DEL MUNDO
+// =========================
+let worldTerrainSeed = 0; // reservado para el futuro
+let gridTerrain; // mapa de orografía (valles/llanos/montes)
 
+// Estado jugador
 let player = {
   id: "local-player",
-  name: storedName || "Luigi",
+  name: (window.localStorage && window.localStorage.getItem("byrp_player_name")) || "Luigi",
   points: 200,
   windMW: 0,
   storageMWh: 0,
@@ -93,7 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
       initGrid();
     }
 
-    // asegurar estructura de cada celda
+    // asegurar estructura
     for (let y = 0; y < GRID_SIZE; y++) {
       for (let x = 0; x < GRID_SIZE; x++) {
         if (!grid[y][x]) {
@@ -112,12 +150,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    generateTerrainForZone();
+    initTerrain(tileX, tileY);
     initUI();
     drawGrid();
 
+    // producción cada 5 s
     setInterval(updateProduction, 5000);
 
+    // animación de cables (~8 fps)
     setInterval(() => {
       energyPhase += 0.4;
       if (energyPhase > 1000) energyPhase = 0;
@@ -139,136 +179,90 @@ function initGrid() {
 }
 
 // =========================
-// OROGRAFÍA
+// OROGRAFÍA SENCILLA
 // =========================
-function generateTerrainForZone() {
-  terrain = Array.from({ length: GRID_SIZE }, () =>
-    Array.from({ length: GRID_SIZE }, () => ({ type: "plain" }))
-  );
+function initTerrain(tileX, tileY) {
+  // Para ahora usamos un ruido muy simple basado en la posición
+  const baseSeed = (tileX * 73856093) ^ (tileY * 19349663);
+  worldTerrainSeed = baseSeed;
+  gridTerrain = [];
 
   for (let y = 0; y < GRID_SIZE; y++) {
+    const row = [];
     for (let x = 0; x < GRID_SIZE; x++) {
-      const r = Math.random();
-      let t = "plain";
-
-      if (currentZone === "templado_norte" || currentZone === "templado_sur") {
-        if (r < 0.65) t = "plain";
-        else if (r < 0.85) t = "hilly";
-        else if (r < 0.95) t = "mountain";
-        else t = "water";
-      } else if (currentZone === "tropical") {
-        if (r < 0.5) t = "plain";
-        else if (r < 0.7) t = "hilly";
-        else if (r < 0.75) t = "mountain";
-        else t = "water";
-      } else if (currentZone === "polar_norte" || currentZone === "polar_sur") {
-        if (r < 0.4) t = "plain";
-        else if (r < 0.7) t = "mountain";
-        else t = "water";
-      } else {
-        if (r < 0.7) t = "plain";
-        else if (r < 0.9) t = "hilly";
-        else t = "mountain";
-      }
-
-      terrain[y][x].type = t;
+      const v = pseudoRandom2D(x, y, baseSeed);
+      let type = "flat";
+      if (v < 0.2) type = "valley";
+      else if (v < 0.7) type = "flat";
+      else if (v < 0.9) type = "hill";
+      else type = "mountain";
+      row.push({ type });
     }
+    gridTerrain.push(row);
   }
 }
 
-function isForbiddenTerrainForGenerator(terrainType) {
-  return terrainType === "water" || terrainType === "mountain";
+// Ruido pseudo-aleatorio simple por celda (determinista)
+function pseudoRandom2D(x, y, seed) {
+  let n = x * 374761393 + y * 668265263 + seed * 1442695040888963407;
+  n = (n ^ (n >> 13)) * 1274126177;
+  n = (n ^ (n >> 16)) >>> 0;
+  return (n % 1000) / 1000; // 0..1
 }
 
-function getTerrainWindFactor(terrainType) {
-  switch (terrainType) {
-    case "plain":
+function terrainToMultiplier(tType) {
+  switch (tType) {
+    case "valley":
+      return 0.9; // un poco menos viento
+    case "flat":
       return 1.0;
-    case "hilly":
+    case "hill":
       return 1.05;
     case "mountain":
-      return 1.15;
-    case "water":
       return 1.1;
     default:
       return 1.0;
   }
 }
 
-function drawTerrainBackground(x, y) {
-  if (!terrain[y] || !terrain[y][x]) return;
-  const t = terrain[y][x].type;
-  const baseX = x * CELL_SIZE;
-  const baseY = y * CELL_SIZE;
-
-  if (t === "plain") return;
-
-  if (t === "hilly") {
-    ctx.fillStyle = "rgba(22, 163, 74, 0.10)";
-  } else if (t === "mountain") {
-    ctx.fillStyle = "rgba(30, 64, 175, 0.16)";
-  } else if (t === "water") {
-    ctx.fillStyle = "rgba(15, 118, 110, 0.20)";
-  } else {
-    return;
-  }
-
-  ctx.fillRect(baseX, baseY, CELL_SIZE, CELL_SIZE);
-}
-
-// =========================
-// SISTEMA DE NIVELES
-// =========================
-// Usamos el Total RE acumulado (player.energyTodayMWh) para definir el nivel
-
-function getLevelInfo(totalRE) {
-  // thresholds en MWh (ajustables)
-  if (totalRE < 50) {
-    return {
-      level: 1,
-      label: "Junior Engineer",
-      bonusDesc: "Sin bonus. Aprende a construir tu primera central.",
-    };
-  }
-  if (totalRE < 200) {
-    return {
-      level: 2,
-      label: "Plant Engineer",
-      bonusDesc: "+5% eficiencia eólica (pronto lo aplicaremos en la física).",
-    };
-  }
-  if (totalRE < 500) {
-    return {
-      level: 3,
-      label: "Senior Engineer",
-      bonusDesc: "-5% pérdidas en cableado (se activará más adelante).",
-    };
-  }
-  if (totalRE < 1000) {
-    return {
-      level: 4,
-      label: "Grid Specialist",
-      bonusDesc: "+10% capacidad de subestaciones.",
-    };
-  }
-  return {
-    level: 5,
-    label: "System Architect",
-    bonusDesc: "Acceso a optimizaciones avanzadas de la planta.",
-  };
-}
-
 // =========================
 // UI
 // =========================
 function initUI() {
+  // botones de build
   document.querySelectorAll(".build-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       selectedAsset = btn.dataset.asset;
     });
   });
 
-  // Botón para cambiar el nombre del jugador
+  // botón reset
+  const resetBtn = document.getElementById("btn-reset-park");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", async () => {
+      const ok = confirm("¿Seguro que quieres resetear todo el parque?");
+      if (!ok) return;
+
+      await resetGridOnServer();
+      initGrid();
+      initTerrain(0, 0); // de momento reiniciamos con seed por defecto
+
+      player.points = 200;
+      player.windMW = 0;
+      player.storageMWh = 0;
+      player.energyTodayMWh = 0;
+      player.windEnergyMWh = 0;
+      player.solarEnergyMWh = 0;
+      player.bessEnergyMWh = 0;
+      player.co2Tons = 0;
+      simHour = 6;
+
+      updatePanels();
+      drawGrid();
+    });
+  }
+
+  // botón cambio de nombre
   const changeNameBtn = document.getElementById("btn-change-name");
   if (changeNameBtn) {
     changeNameBtn.addEventListener("click", () => {
@@ -276,15 +270,35 @@ function initUI() {
       if (!newName) return;
       player.name = newName;
       if (window.localStorage) {
-        window.localStorage.setItem("byrp_player_name", newName);
+        window.localStorage.setItem("byrp-player_name", newName);
       }
       updatePanels();
     });
   }
 
+  // placeholders Leaderboard / Login
+  const leaderBtn = document.getElementById("btn-leaderboard");
+  if (leaderBtn) {
+    leaderBtn.addEventListener("click", () => {
+      alert(
+        "Leaderboard aún no está disponible.\n\nEn futuras versiones verás aquí el ranking de las mejores centrales del mundo (top 3 oro/plata/bronce)."
+      );
+    });
+  }
+
+  const loginBtn = document.getElementById("btn-login");
+  if (loginBtn) {
+    loginBtn.addEventListener("click", () => {
+      alert(
+        "Login / Signup todavía no está activo.\n\nMás adelante podrás crear tu cuenta, guardar tus centrales y competir contra otros jugadores."
+      );
+    });
+  }
+
+  // listeners del canvas
+  const hoverInfo = document.getElementById("hover-info");
   canvas.addEventListener("click", handleCanvasClick);
 
-  const hoverInfo = document.getElementById("hover-info");
   canvas.addEventListener("mousemove", (e) => {
     const { x, y } = getCellFromEvent(e);
     if (!inBounds(x, y)) {
@@ -305,23 +319,78 @@ function initUI() {
   updatePanels();
 }
 
-  // Placeholders para Leaderboard y Login/Signup
-  const leaderBtn = document.getElementById("btn-leaderboard");
-  if (leaderBtn) {
-    leaderBtn.addEventListener("click", () => {
-      alert("Leaderboard aún no está disponible.\n\nEn el futuro verás aquí el ranking de centrales más eficientes.");
-    });
+// =========================
+// CLICK / CONSTRUCCIÓN
+// =========================
+function handleCanvasClick(e) {
+  if (!selectedAsset) return;
+  const { x, y } = getCellFromEvent(e);
+  if (!inBounds(x, y)) return;
+
+  const cell = grid[y][x];
+
+  // BULLDOZER
+  if (selectedAsset === "bulldozer") {
+    if (cell.type !== "empty") {
+      const originalCost = getAssetCost(cell.type);
+      const refund = Math.round(originalCost / 2);
+      player.points += refund;
+
+      removeAssetStats(cell.type);
+
+      cell.type = "empty";
+      cell.owner = null;
+      cell.connected = false;
+      cell.distToSub = null;
+      cell.energized = false;
+
+      drawGrid();
+      updatePanels();
+      updateCellOnServer(x, y, "empty", null);
+    }
+    return;
   }
 
-  const loginBtn = document.getElementById("btn-login");
-  if (loginBtn) {
-    loginBtn.addEventListener("click", () => {
-      alert("Login / Signup aún no está disponible.\n\nMás adelante podrás guardar tus centrales y competir con otros jugadores.");
-    });
+  // Si ya está ocupado, nada
+  if (cell.type !== "empty") return;
+
+  const cost = getAssetCost(selectedAsset);
+  if (player.points < cost) {
+    alert("No tienes puntos suficientes.");
+    return;
   }
+
+  player.points -= cost;
+
+  cell.type = selectedAsset;
+  cell.owner = player.id;
+  cell.connected = false;
+  cell.distToSub = null;
+  cell.energized = false;
+
+  applyAssetStats(selectedAsset);
+
+  // Aviso si es generador y no tiene conexión mínima
+  if (
+    (selectedAsset === "turbine_3" ||
+      selectedAsset === "turbine_5" ||
+      selectedAsset === "solar") &&
+    !hasNeighborConnection(x, y)
+  ) {
+    alert(
+      "Este generador todavía NO producirá energía.\n\n" +
+        "Debe estar conectado mediante CABLE a una SUBESTACIÓN para evacuar la energía."
+    );
+  }
+
+  drawGrid();
+  updatePanels();
+
+  updateCellOnServer(x, y, cell.type, cell.owner);
+}
 
 // =========================
-// HELPERS
+// HELPERS GEOM / VECINOS
 // =========================
 function getCellFromEvent(e) {
   const rect = canvas.getBoundingClientRect();
@@ -354,108 +423,25 @@ function hasNeighborConnection(x, y) {
 
 function getCableConnections(x, y) {
   const dirs = { up: false, down: false, left: false, right: false };
-  const conductive = ["cable", "substation", "turbine_3", "turbine_5", "solar", "bess_10"];
+  const candidates = ["cable", "substation", "turbine_3", "turbine_5", "solar"];
 
   if (inBounds(x, y - 1)) {
     const c = grid[y - 1][x];
-    if (c && conductive.includes(c.type)) dirs.up = true;
+    if (c && candidates.includes(c.type)) dirs.up = true;
   }
   if (inBounds(x, y + 1)) {
     const c = grid[y + 1][x];
-    if (c && conductive.includes(c.type)) dirs.down = true;
+    if (c && candidates.includes(c.type)) dirs.down = true;
   }
   if (inBounds(x - 1, y)) {
     const c = grid[y][x - 1];
-    if (c && conductive.includes(c.type)) dirs.left = true;
+    if (c && candidates.includes(c.type)) dirs.left = true;
   }
   if (inBounds(x + 1, y)) {
     const c = grid[y][x + 1];
-    if (c && conductive.includes(c.type)) dirs.right = true;
+    if (c && candidates.includes(c.type)) dirs.right = true;
   }
   return dirs;
-}
-
-// =========================
-// CLICK / CONSTRUCCIÓN
-// =========================
-function handleCanvasClick(e) {
-  if (!selectedAsset) return;
-  const { x, y } = getCellFromEvent(e);
-  if (!inBounds(x, y)) return;
-
-  const cell = grid[y][x];
-
-  // Bulldozer
-  if (selectedAsset === "bulldozer") {
-    if (cell.type !== "empty") {
-      const originalCost = getAssetCost(cell.type);
-      const refund = Math.round(originalCost / 2);
-      player.points += refund;
-      removeAssetStats(cell.type);
-
-      cell.type = "empty";
-      cell.owner = null;
-      cell.connected = false;
-      cell.distToSub = null;
-      cell.energized = false;
-
-      drawGrid();
-      updatePanels();
-
-      updateCellOnServer(x, y, "empty", null);
-    }
-    return;
-  }
-
-  // Construcción normal
-  if (cell.type !== "empty") return;
-
-  const terrType = terrain[y][x]?.type || "plain";
-  if (
-    (selectedAsset === "turbine_3" ||
-      selectedAsset === "turbine_5" ||
-      selectedAsset === "solar") &&
-    isForbiddenTerrainForGenerator(terrType)
-  ) {
-    alert(
-      "No puedes instalar este generador en este tipo de terreno.\n" +
-        "Prueba en una celda más llana o adecuada."
-    );
-    return;
-  }
-
-  const cost = getAssetCost(selectedAsset);
-  if (player.points < cost) {
-    alert("Not enough points!");
-    return;
-  }
-
-  player.points -= cost;
-
-  cell.type = selectedAsset;
-  cell.owner = player.id;
-  cell.connected = false;
-  cell.distToSub = null;
-  cell.energized = false;
-
-  applyAssetStats(selectedAsset);
-
-  if (
-    (selectedAsset === "turbine_3" ||
-      selectedAsset === "turbine_5" ||
-      selectedAsset === "solar") &&
-    !hasNeighborConnection(x, y)
-  ) {
-    alert(
-      "Este generador todavía NO producirá energía.\n\n" +
-        "Debe estar conectado mediante CABLE a una SUBESTACIÓN para evacuar la energía."
-    );
-  }
-
-  drawGrid();
-  updatePanels();
-
-  updateCellOnServer(x, y, cell.type, cell.owner);
 }
 
 // =========================
@@ -465,12 +451,44 @@ function drawGrid() {
   ctx.fillStyle = "#020617";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  ctx.save();
+  ctx.strokeStyle = "rgba(15,23,42,0.6)";
+  ctx.lineWidth = 0.4;
+
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
-      drawTerrainBackground(x, y);
+      ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      drawTerrain(x, y);
       drawAsset(grid[y][x].type, x, y);
     }
   }
+
+  ctx.restore();
+}
+
+function drawTerrain(x, y) {
+  if (!gridTerrain || !gridTerrain[y] || !gridTerrain[y][x]) return;
+  const t = gridTerrain[y][x].type;
+  const cx = x * CELL_SIZE + CELL_SIZE / 2;
+  const cy = y * CELL_SIZE + CELL_SIZE / 2;
+
+  switch (t) {
+    case "valley":
+      ctx.fillStyle = "rgba(15,118,110,0.15)";
+      break;
+    case "flat":
+      ctx.fillStyle = "rgba(30,64,175,0.1)";
+      break;
+    case "hill":
+      ctx.fillStyle = "rgba(21,128,61,0.15)";
+      break;
+    case "mountain":
+      ctx.fillStyle = "rgba(148,163,184,0.2)";
+      break;
+    default:
+      return;
+  }
+  ctx.fillRect(cx - CELL_SIZE / 2, cy - CELL_SIZE / 2, CELL_SIZE, CELL_SIZE);
 }
 
 function drawAsset(type, x, y) {
@@ -570,6 +588,7 @@ function drawAsset(type, x, y) {
     const { up, down, left, right } = getCableConnections(x, y);
     const half = CELL_SIZE / 2 - 1;
 
+    // base gris
     ctx.strokeStyle = "#64748b";
     ctx.lineWidth = 1.6;
     ctx.beginPath();
@@ -598,12 +617,14 @@ function drawAsset(type, x, y) {
       ctx.stroke();
     }
 
+    // nodo central
     ctx.strokeStyle = "#475569";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.arc(cx, cy, 1.3, 0, Math.PI * 2);
     ctx.stroke();
 
+    // energía verde
     if (cell && cell.energized) {
       ctx.save();
       ctx.strokeStyle = "#22c55e";
@@ -636,6 +657,7 @@ function drawAsset(type, x, y) {
       ctx.stroke();
       ctx.restore();
     }
+
     return;
   }
 
@@ -681,7 +703,7 @@ function drawAsset(type, x, y) {
     ctx.closePath();
     ctx.stroke();
 
-    ctx.strokeStyle = isConnected ? "#bbf7d0" : "#fde68a";
+    ctx.strokeStyle = isConnected ? "#bbf5a0" : "#fed7aa";
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.moveTo(cx - 6, cy + 3);
@@ -735,6 +757,7 @@ function removeAssetStats(type) {
 // CONEXIONES + PRODUCCIÓN
 // =========================
 function computeConnectionsAndDistances() {
+  // reset flags
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
@@ -756,9 +779,10 @@ function computeConnectionsAndDistances() {
     [0, 1],
     [0, -1],
   ];
-  const conductive = ["cable", "turbine_3", "turbine_5", "solar", "bess_10"];
 
-  // semillas: subestaciones
+  const candidates = ["cable", "turbine_3", "turbine_5", "solar"];
+
+  // seeds = subestaciones
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       if (grid[y][x].type === "substation") {
@@ -768,6 +792,7 @@ function computeConnectionsAndDistances() {
     }
   }
 
+  // BFS
   while (queue.length > 0) {
     const { x, y } = queue.shift();
     const d = dist[y][x];
@@ -777,8 +802,7 @@ function computeConnectionsAndDistances() {
       const ny = y + dy;
       if (!inBounds(nx, ny)) continue;
       const ncell = grid[ny][nx];
-      if (!ncell || !conductive.includes(ncell.type)) continue;
-
+      if (!ncell || !candidates.includes(ncell.type)) continue;
       const nd = d + 1;
       if (nd < dist[ny][nx]) {
         dist[ny][nx] = nd;
@@ -787,6 +811,7 @@ function computeConnectionsAndDistances() {
     }
   }
 
+  // aplicar distancias
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
@@ -797,11 +822,7 @@ function computeConnectionsAndDistances() {
         cell.energized = d < Infinity;
       }
 
-      if (
-        cell.type === "turbine_3" ||
-        cell.type === "turbine_5" ||
-        cell.type === "solar"
-      ) {
+      if (cell.type === "turbine_3" || cell.type === "turbine_5" || cell.type === "solar") {
         if (d < Infinity) {
           cell.connected = true;
           cell.distToSub = d;
@@ -817,7 +838,6 @@ function computeConnectionsAndDistances() {
 function computeWakeFactor(x, y) {
   let upstream = 0;
   const maxRange = 6;
-
   for (let dy = 1; dy <= maxRange; dy++) {
     const ny = y - dy;
     if (!inBounds(x, ny)) break;
@@ -825,7 +845,6 @@ function computeWakeFactor(x, y) {
     if (!cell || !cell.connected) continue;
     if (cell.type === "turbine_3" || cell.type === "turbine_5") upstream++;
   }
-
   const factor = 1 - 0.1 * upstream;
   return Math.max(0.4, factor);
 }
@@ -842,9 +861,11 @@ function computeCableLossFactor(distToSub) {
 function updateProduction() {
   computeConnectionsAndDistances();
 
+  // avanzar hora
   simHour = (simHour + 1) % 24;
   const isDay = simHour >= 6 && simHour < 18;
 
+  // producción
   let numSubstations = 0;
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
@@ -853,27 +874,27 @@ function updateProduction() {
   }
 
   const profile = ZONE_PROFILES[currentZone] || ZONE_PROFILES.desconocida;
-  const capacityPerSubstation = profile.substationMW;
-  const substationCapacityMW = numSubstations * capacityPerSubstation;
+  const capacityPerSub = profile.substationMW;
+  const substationCapMW = numSubstations * capacityPerSub;
 
-  let connectedWindMW = 0;
+  let connectedMW = 0;
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
-      const cell = grid[y][x];
-      if (!cell || !cell.connected) continue;
-      if (cell.type === "turbine_3") connectedWindMW += 3;
-      if (cell.type === "turbine_5") connectedWindMW += 5;
+      const c = grid[y][x];
+      if (!c || !c.connected) continue;
+      if (c.type === "turbine_3") connectedMW += 3;
+      if (c.type === "turbine_5") connectedMW += 5;
     }
   }
 
   let capacityFactor = 1;
-  if (substationCapacityMW > 0 && connectedWindMW > substationCapacityMW) {
-    capacityFactor = substationCapacityMW / connectedWindMW;
+  if (substationCapMW > 0 && connectedMW > substationCapMW) {
+    capacityFactor = substationCapMW / connectedMW;
   }
 
-  let windProduced = 0;
-  let solarProduced = 0;
-  let bessProduced = 0; // aún no implementado
+  let windProd = 0;
+  let solarProd = 0;
+  let bessProd = 0; // futuro
 
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
@@ -881,76 +902,68 @@ function updateProduction() {
       if (!cell || cell.owner !== player.id || !cell.connected) continue;
 
       const cableFactor = computeCableLossFactor(cell.distToSub);
-      const terrType = terrain[y][x]?.type || "plain";
 
+      // turbinas
       if (cell.type === "turbine_3" || cell.type === "turbine_5") {
-        let basePerTick = 0;
-        if (cell.type === "turbine_3") basePerTick = 2;
-        if (cell.type === "turbine_5") basePerTick = 4;
+        let base = 0;
+        if (cell.type === "turbine_3") base = 2;
+        if (cell.type === "turbine_5") base = 4;
+        const wakeF = computeWakeFactor(x, y);
+        const windF = profile.windFactor;
+        const terr = gridTerrain && gridTerrain[y] && gridTerrain[y][x] ? gridTerrain[y][x].type : "flat";
+        const terrF = terrainToMultiplier(terr);
 
-        const wakeFactor = computeWakeFactor(x, y);
-        const windFactor = profile.windFactor;
-        const terrainFactor = getTerrainWindFactor(terrType);
-
-        const localWind =
-          basePerTick *
-          windFactor *
-          terrainFactor *
-          wakeFactor *
-          cableFactor *
-          capacityFactor;
-
-        windProduced += localWind;
+        windProd += base * windF * terrF * wakeF * cableFactor * capacityFactor;
       }
 
+      // solar
       if (cell.type === "solar" && isDay) {
-        const baseSolarMW = 0.5; // 0.5 MW por celda
-        const solarFactorZone = 1.0;
-        const solarFactorTerrain = 1.0;
-        const localSolar =
-          baseSolarMW * solarFactorZone * solarFactorTerrain * cableFactor;
-
-        solarProduced += localSolar;
+        const baseSolar = 1.5; // MWh por tick aprox
+        solarProd += baseSolar * cableFactor;
       }
     }
   }
 
-  player.windEnergyMWh += windProduced;
-  player.solarEnergyMWh += solarProduced;
-  player.bessEnergyMWh += bessProduced;
+  player.windEnergyMWh += windProd;
+  player.solarEnergyMWh += solarProd;
+  player.bessEnergyMWh += bessProd;
 
-  const totalProduced = windProduced + solarProduced + bessProduced;
-
-  player.energyTodayMWh += totalProduced;
-  player.co2Tons += totalProduced * 0.0003;
-  player.points += Math.round(totalProduced / 2);
+  const totalProd = windProd + solarProd + bessProd;
+  player.energyTodayMWh += totalProd;
+  player.co2Tons += totalProd * 0.0003;
+  player.points += Math.round(totalProd / 2);
 
   updatePanels();
   drawGrid();
 }
 
 // =========================
-// PANEL STATS
+// PANEL STATS + NIVELES
 // =========================
 function updatePanels() {
   const totalRE =
     player.windEnergyMWh + player.solarEnergyMWh + player.bessEnergyMWh;
-  
   const levelInfo = getLevelInfo(totalRE);
-  
-  const windStat = document.getElementById("stat-wind-energy");
-  const solarStat = document.getElementById("stat-solar-energy");
-  const bessStat = document.getElementById("stat-bess-energy");
-  const totalStat = document.getElementById("stat-total-energy");
-  const timeStat = document.getElementById("stat-time");
 
-  if (windStat) windStat.textContent = player.windEnergyMWh.toFixed(1);
-  if (solarStat) solarStat.textContent = player.solarEnergyMWh.toFixed(1);
-  if (bessStat) bessStat.textContent = player.bessEnergyMWh.toFixed(1);
-  if (totalStat) totalStat.textContent = totalRE.toFixed(1);
-  if (timeStat) {
+  const windStat = document.getElementById("stat-wind");
+  const storageStat = document.getElementById("stat-storage");
+  const energyStat = document.getElementById("stat-energy");
+  const windRE = document.getElementById("stat-wind-re");
+  const solarRE = document.getElementById("stat-solar-re");
+  const bessRE = document.getElementById("stat-bess-re");
+  const totalRESpan = document.getElementById("stat-total-re");
+  const timeSpan = document.getElementById("stat-time");
+
+  if (windStat) windStat.textContent = player.windMW.toFixed(0);
+  if (storageStat) storageStat.textContent = player.storageMWh.toFixed(0);
+  if (energyStat) energyStat.textContent = player.energyTodayMWh.toFixed(0);
+  if (windRE) windRE.textContent = player.windEnergyMWh.toFixed(0);
+  if (solarRE) solarRE.textContent = player.solarEnergyMWh.toFixed(0);
+  if (bessRE) bessRE.textContent = player.bessEnergyMWh.toFixed(0);
+  if (totalRESpan) totalRESpan.textContent = totalRE.toFixed(0);
+  if (timeSpan) {
     const h = simHour.toString().padStart(2, "0");
-    timeStat.textContent = `${h}:00`;
+    timeSpan.textContent = `${h}:00`;
   }
 
   document.getElementById("park-installed").textContent =
@@ -958,13 +971,19 @@ function updatePanels() {
   document.getElementById("park-storage").textContent =
     player.storageMWh.toFixed(0);
   document.getElementById("park-energy").textContent =
-    player.energyTodayMWh.toFixed(1);
+    player.energyTodayMWh.toFixed(0);
   document.getElementById("park-co2").textContent =
     player.co2Tons.toFixed(2);
 
-  document.getElementById("player-name").textContent = player.name;
-  document.getElementById("player-points").textContent =
-    player.points.toFixed(0);
+  const nameSpan = document.getElementById("player-name");
+  if (nameSpan) nameSpan.textContent = player.name;
+  const ptsSpan = document.getElementById("player-points");
+  if (ptsSpan) ptsSpan.textContent = player.points.toFixed(0);
+
+  const levelSpan = document.getElementById("player-level");
+  if (levelSpan) {
+    levelSpan.textContent = `${levelInfo.level} – ${levelInfo.label}`;
+  }
 
   const bonusEl = document.getElementById("player-bonus");
   if (bonusEl) {
@@ -977,7 +996,6 @@ function updatePanels() {
       zoneText = "Polar";
     }
 
-    // descripción simple de bonus por zona
     let zoneBonus = "";
     if (currentZone === "tropical") {
       zoneBonus = "Buen solar, viento medio.";
@@ -987,12 +1005,6 @@ function updatePanels() {
       zoneBonus = "Condiciones equilibradas.";
     }
 
-    bonusEl.textContent = `Zona: ${zoneText} – ${zoneBonus}`;
+    bonusEl.textContent = `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
-
-
-
-
-
-
