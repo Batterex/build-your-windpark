@@ -943,47 +943,44 @@ function updatePanels() {
     player.windEnergyMWh + player.solarEnergyMWh + player.bessEnergyMWh;
   const levelInfo = getLevelInfo(totalRE);
 
-  const windStat = document.getElementById("stat-wind");
-  const storageStat = document.getElementById("stat-storage");
-  const energyStat = document.getElementById("stat-energy");
-  const windRE = document.getElementById("stat-wind-re");
-  const solarRE = document.getElementById("stat-solar-re");
-  const bessRE = document.getElementById("stat-bess-re");
-  const totalRESpan = document.getElementById("stat-total-re");
+  // ===== Cabecera superior =====
+  const windRESpan = document.getElementById("stat-wind-energy");
+  const solarRESpan = document.getElementById("stat-solar-energy");
+  const bessRESpan = document.getElementById("stat-bess-energy");
+  const totalRESpan = document.getElementById("stat-total-energy");
   const timeSpan = document.getElementById("stat-time");
 
-  if (windStat) windStat.textContent = player.windMW.toFixed(0);
-  if (storageStat) storageStat.textContent = player.storageMWh.toFixed(0);
-  if (energyStat) energyStat.textContent = player.energyTodayMWh.toFixed(0);
-  if (windRE) windRE.textContent = player.windEnergyMWh.toFixed(0);
-  if (solarRE) solarRE.textContent = player.solarEnergyMWh.toFixed(0);
-  if (bessRE) bessRE.textContent = player.bessEnergyMWh.toFixed(0);
-  if (totalRESpan) totalRESpan.textContent = totalRE.toFixed(0);
+  if (windRESpan) windRESpan.textContent = player.windEnergyMWh.toFixed(1);
+  if (solarRESpan) solarRESpan.textContent = player.solarEnergyMWh.toFixed(1);
+  if (bessRESpan) bessRESpan.textContent = player.bessEnergyMWh.toFixed(1);
+  if (totalRESpan) totalRESpan.textContent = totalRE.toFixed(1);
+
   if (timeSpan) {
     const h = simHour.toString().padStart(2, "0");
     timeSpan.textContent = `${h}:00`;
   }
 
-  document.getElementById("park-installed").textContent =
-    player.windMW.toFixed(0);
-  document.getElementById("park-storage").textContent =
-    player.storageMWh.toFixed(0);
-  document.getElementById("park-energy").textContent =
-    player.energyTodayMWh.toFixed(0);
-  document.getElementById("park-co2").textContent =
-    player.co2Tons.toFixed(2);
+  // ===== Park stats (panel intermedio) =====
+  const installedSpan = document.getElementById("park-installed");
+  const storageSpan = document.getElementById("park-storage");
+  const energySpan = document.getElementById("park-energy");
+  const co2Span = document.getElementById("park-co2");
 
+  if (installedSpan) installedSpan.textContent = player.windMW.toFixed(0);
+  if (storageSpan) storageSpan.textContent = player.storageMWh.toFixed(0);
+  if (energySpan) energySpan.textContent = player.energyTodayMWh.toFixed(1);
+  if (co2Span) co2Span.textContent = player.co2Tons.toFixed(2);
+
+  // ===== Player status =====
   const nameSpan = document.getElementById("player-name");
-  if (nameSpan) nameSpan.textContent = player.name;
   const ptsSpan = document.getElementById("player-points");
-  if (ptsSpan) ptsSpan.textContent = player.points.toFixed(0);
-
   const levelSpan = document.getElementById("player-level");
-  if (levelSpan) {
-    levelSpan.textContent = `${levelInfo.level} – ${levelInfo.label}`;
-  }
-
   const bonusEl = document.getElementById("player-bonus");
+
+  if (nameSpan) nameSpan.textContent = player.name;
+  if (ptsSpan) ptsSpan.textContent = player.points.toFixed(0);
+  if (levelSpan) levelSpan.textContent = `${levelInfo.level} – ${levelInfo.label}`;
+
   if (bonusEl) {
     let zoneText = currentZone;
     if (currentZone === "templado_norte" || currentZone === "templado_sur") {
@@ -1003,7 +1000,10 @@ function updatePanels() {
       zoneBonus = "Condiciones equilibradas.";
     }
 
-    bonusEl.textContent = `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
+    bonusEl.textContent =
+      `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
+
 
