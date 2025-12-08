@@ -55,29 +55,29 @@ let simHour = 6; // hora simulada
 // SISTEMA DE NIVELES
 // =========================
 function getLevelInfo(totalRE) {
-  // Umbrales en MWh (ajustables)
-  if (totalRE < 50) {
+  // totalRE en MWh
+  if (totalRE < 500) {
     return {
       level: 1,
       label: "Junior Engineer",
       bonusDesc: "Sin bonus. Aprende a diseñar tu primera central.",
     };
   }
-  if (totalRE < 200) {
+  if (totalRE < 2000) {
     return {
       level: 2,
       label: "Plant Engineer",
-      bonusDesc: "+5% eficiencia eólica (se aplicará en futuras versiones).",
+      bonusDesc: "+5% eficiencia eólica (se aplicará en próximas versiones).",
     };
   }
-  if (totalRE < 500) {
+  if (totalRE < 5000) {
     return {
       level: 3,
       label: "Senior Engineer",
-      bonusDesc: "-5% pérdidas en cableado (se aplicará más adelante).",
+      bonusDesc: "-5% pérdidas en cableado (futuro ajuste).",
     };
   }
-  if (totalRE < 1000) {
+  if (totalRE < 15000) {
     return {
       level: 4,
       label: "Grid Specialist",
@@ -87,7 +87,7 @@ function getLevelInfo(totalRE) {
   return {
     level: 5,
     label: "System Architect",
-    bonusDesc: "Acceso a optimizaciones avanzadas de la planta.",
+    bonusDesc: "Optimización avanzada de toda la planta.",
   };
 }
 
@@ -1005,6 +1005,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
