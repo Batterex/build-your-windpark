@@ -581,32 +581,36 @@ function drawAsset(type, x, y) {
     return;
   }
 
-  // SUBESTACIÓN
-  if (type === "substation") {
-    ctx.fillStyle = "#0f172a";
-    ctx.strokeStyle = "#fbbf24";
-    ctx.lineWidth = 1.4;
-    ctx.fillRect(cx - 7, cy - 5, 14, 10);
-    ctx.strokeRect(cx - 7, cy - 5, 14, 10);
+// SUBESTACIÓN
+if (type === "substation") {
+  const isOverloaded = cell && cell.overloaded;
 
-    ctx.fillStyle = "#fbbf24";
-    ctx.globalAlpha = 0.35;
-    ctx.fillRect(cx - 5, cy - 3, 4, 6);
-    ctx.fillRect(cx + 1, cy - 3, 4, 6);
-    ctx.globalAlpha = 1;
+  ctx.fillStyle = "#0f172a";
+  ctx.strokeStyle = isOverloaded ? "#f97373" : "#fbbf24"; // rojo si sobrecargada
+  ctx.lineWidth = 1.6;
+  ctx.fillRect(cx - 7, cy - 5, 14, 10);
+  ctx.strokeRect(cx - 7, cy - 5, 14, 10);
 
-    ctx.fillStyle = "#fbbf24";
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - 4);
-    ctx.lineTo(cx - 2, cy + 1);
-    ctx.lineTo(cx, cy + 1);
-    ctx.lineTo(cx - 1, cy + 5);
-    ctx.lineTo(cx + 2, cy);
-    ctx.lineTo(cx, cy);
-    ctx.closePath();
-    ctx.fill();
-    return;
-  }
+  // ventanitas
+  ctx.fillStyle = isOverloaded ? "#fecaca" : "#fbbf24";
+  ctx.globalAlpha = 0.45;
+  ctx.fillRect(cx - 5, cy - 3, 4, 6);
+  ctx.fillRect(cx + 1, cy - 3, 4, 6);
+  ctx.globalAlpha = 1;
+
+  // rayo
+  ctx.fillStyle = isOverloaded ? "#fecaca" : "#fbbf24";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 4);
+  ctx.lineTo(cx - 2, cy + 1);
+  ctx.lineTo(cx, cy + 1);
+  ctx.lineTo(cx - 1, cy + 5);
+  ctx.lineTo(cx + 2, cy);
+  ctx.lineTo(cx, cy);
+  ctx.closePath();
+  ctx.fill();
+  return;
+}
 
   // CABLE
   if (type === "cable") {
@@ -1072,6 +1076,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
