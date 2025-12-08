@@ -448,22 +448,20 @@ function getCableConnections(x, y) {
 // DIBUJO
 // =========================
 function drawGrid() {
+  // Fondo general
   ctx.fillStyle = "#020617";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.save();
-  ctx.strokeStyle = "rgba(15,23,42,0.6)";
-  ctx.lineWidth = 0.4;
-
+  // SIN líneas de grid: solo orografía + assets
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
-      ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      // Fondo de orografía (valley/flat/hill/mountain)
       drawTerrain(x, y);
+
+      // Elemento de la celda (turbina, cable, solar, etc.)
       drawAsset(grid[y][x].type, x, y);
     }
   }
-
-  ctx.restore();
 }
 
 function drawTerrain(x, y) {
@@ -1008,3 +1006,4 @@ function updatePanels() {
     bonusEl.textContent = `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
