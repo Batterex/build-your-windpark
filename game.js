@@ -322,12 +322,15 @@ function initUI() {
 // =========================
 function handleCanvasClick(e) {
   if (!selectedAsset) return;
+
   const { x, y } = getCellFromEvent(e);
   if (!inBounds(x, y)) return;
 
   const cell = grid[y][x];
 
-  // BULLDOZER
+  // ==========================
+  // MODO BULLDOZER
+  // ==========================
   if (selectedAsset === "bulldozer") {
     if (cell.type !== "empty") {
       const originalCost = getAssetCost(cell.type);
@@ -341,26 +344,38 @@ function handleCanvasClick(e) {
       cell.connected = false;
       cell.distToSub = null;
       cell.energized = false;
+      cell.overloaded = false;
 
       drawGrid();
       updatePanels();
+
       updateCellOnServer(x, y, "empty", null);
     }
     return;
   }
 
-  // Si ya está ocupado, nada
+  // ==========================
+  // MODO CONSTRUCCIÓN NORMAL
+  // ==========================
+
+  // Si ya está ocupado, no hacemos nada
   if (cell.type !== "empty") return;
 
-    // Si queremos construir una turbina o un solar y YA hay alguna sub saturada, no dejamos
+  // Comprobación de terreno (no permitir generadores en montaña/agua, si lo estás usando)
+  const terrType =
+    gridTerrain && gridTerrain[y] && gridTerrain[y][x]
+      ? gridTerrain[y][x].type
+      : "flat";
+
   if (
     (selectedAsset === "turbine_3" ||
       selectedAsset === "turbine_5" ||
       selectedAsset === "solar") &&
-    isAnySubstationOverloaded()
+    (terrType === "mountain" || terrType === "water")
   ) {
     alert(
-      "Subestación saturada.\n\nNo puedes conectar más generación a la red actual.\nInstala otra subestación o redistribuye tu planta."
+      "No puedes instalar este generador en este tipo de terreno.\n" +
+        "Prueba en una celda más llana o adecuada."
     );
     return;
   }
@@ -371,17 +386,20 @@ function handleCanvasClick(e) {
     return;
   }
 
+  // Pagar
   player.points -= cost;
 
+  // Colocar
   cell.type = selectedAsset;
   cell.owner = player.id;
   cell.connected = false;
   cell.distToSub = null;
   cell.energized = false;
+  cell.overloaded = false;
 
   applyAssetStats(selectedAsset);
 
-  // Aviso si es generador y no tiene conexión mínima
+  // Aviso si es generador y no tiene conexión mínima a cable/subestación
   if (
     (selectedAsset === "turbine_3" ||
       selectedAsset === "turbine_5" ||
@@ -397,6 +415,7 @@ function handleCanvasClick(e) {
   drawGrid();
   updatePanels();
 
+  // Guardar en backend
   updateCellOnServer(x, y, cell.type, cell.owner);
 }
 
@@ -1076,6 +1095,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
