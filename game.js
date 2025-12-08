@@ -884,76 +884,118 @@ function computeCableLossFactor(distToSub) {
 }
 
 function updateProduction() {
+  // Primero calculamos qué está conectado y distancias
   computeConnectionsAndDistances();
 
-  // avanzar hora
+  // Avanzamos la hora (1 hora por tick)
   simHour = (simHour + 1) % 24;
-  const isDay = simHour >= 6 && simHour < 18;
+  const isDay = simHour >= 6 && simHour < 19; // solar solo de 06:00 a 19:00
 
-  // producción
+  // Contar subestaciones
   let numSubstations = 0;
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
-      if (grid[y][x].type === "substation") numSubstations++;
+      const cell = grid[y][x];
+      if (cell && cell.type === "substation") {
+        numSubstations++;
+        // por defecto no sobrecargada, ya la marcaremos más abajo
+        cell.overloaded = false;
+      }
     }
   }
 
   const profile = ZONE_PROFILES[currentZone] || ZONE_PROFILES.desconocida;
-  const capacityPerSub = profile.substationMW;
-  const substationCapMW = numSubstations * capacityPerSub;
+  const capacityPerSub = profile.substationMW; // MW máximo por subestación
+  const totalCapacityMW = numSubstations * capacityPerSub;
 
-  let connectedMW = 0;
-  for (let y = 0; y < GRID_SIZE; y++) {
-    for (let x = 0; x < GRID_SIZE; x++) {
-      const c = grid[y][x];
-      if (!c || !c.connected) continue;
-      if (c.type === "turbine_3") connectedMW += 3;
-      if (c.type === "turbine_5") connectedMW += 5;
-    }
-  }
-
-  let capacityFactor = 1;
-  if (substationCapMW > 0 && connectedMW > substationCapMW) {
-    capacityFactor = substationCapMW / connectedMW;
-  }
-
-  let windProd = 0;
-  let solarProd = 0;
-  let bessProd = 0; // futuro
+  // MW conectados (turbinas + solar)
+  let connectedWindMW = 0;
+  let connectedSolarMW = 0;
 
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const cell = grid[y][x];
-      if (!cell || cell.owner !== player.id || !cell.connected) continue;
+      if (!cell || !cell.connected) continue;
 
-      const cableFactor = computeCableLossFactor(cell.distToSub);
+      if (cell.type === "turbine_3") connectedWindMW += 3;
+      if (cell.type === "turbine_5") connectedWindMW += 5;
+      if (cell.type === "solar") connectedSolarMW += 0.5; // 0.5 MW por celda
+    }
+  }
 
-      // turbinas
-      if (cell.type === "turbine_3" || cell.type === "turbine_5") {
-        let base = 0;
-        if (cell.type === "turbine_3") base = 2;
-        if (cell.type === "turbine_5") base = 4;
-        const wakeF = computeWakeFactor(x, y);
-        const windF = profile.windFactor;
-        const terr = gridTerrain && gridTerrain[y] && gridTerrain[y][x] ? gridTerrain[y][x].type : "flat";
-        const terrF = terrainToMultiplier(terr);
+  const totalConnectedMW = connectedWindMW + connectedSolarMW;
 
-        windProd += base * windF * terrF * wakeF * cableFactor * capacityFactor;
-      }
+  // Factor de curtailment por capacidad de subestaciones
+  let capacityFactor = 1;
+  if (totalCapacityMW > 0 && totalConnectedMW > totalCapacityMW) {
+    capacityFactor = totalCapacityMW / totalConnectedMW;
+  }
 
-      // solar
-      if (cell.type === "solar" && isDay) {
-        const baseSolar = 1.5; // MWh por tick aprox
-        solarProd += baseSolar * cableFactor;
+  // Marcar las subestaciones sobrecargadas (para pintar en rojo)
+  const overloaded = totalCapacityMW > 0 && totalConnectedMW > totalCapacityMW;
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = grid[y][x];
+      if (cell && cell.type === "substation") {
+        cell.overloaded = overloaded;
       }
     }
   }
 
+  // Ahora calculamos la producción real
+  let windProd = 0;
+  let solarProd = 0;
+  let bessProd = 0; // pendiente
+
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = grid[y][x];
+      if (!cell || !cell.connected || cell.owner !== player.id) continue;
+
+      const cableFactor = computeCableLossFactor(cell.distToSub);
+
+      // EÓLICO
+      if (cell.type === "turbine_3" || cell.type === "turbine_5") {
+        let base = 0;
+        if (cell.type === "turbine_3") base = 2;
+        if (cell.type === "turbine_5") base = 4;
+
+        const windFactor = profile.windFactor;
+        const terrType = gridTerrain && gridTerrain[y] && gridTerrain[y][x]
+          ? gridTerrain[y][x].type
+          : "flat";
+        const terrFactor = terrainToMultiplier(terrType);
+
+        // Por ahora sin wake para simplificar
+        const localWind =
+          base * windFactor * terrFactor * cableFactor * capacityFactor;
+
+        windProd += localWind;
+      }
+
+      // SOLAR (solo de día)
+      if (cell.type === "solar" && isDay) {
+        const baseSolar = 0.5; // MW por celda
+        const solarFactorZone = 1.0;  // luego afinable
+        const solarFactorTerr = 1.0;  // luego afinable
+
+        const localSolar =
+          baseSolar * solarFactorZone * solarFactorTerr * cableFactor * capacityFactor;
+
+        solarProd += localSolar;
+      }
+
+      // BESS como generador → lo dejamos para la próxima iteración
+    }
+  }
+
+  // Acumular energía
   player.windEnergyMWh += windProd;
   player.solarEnergyMWh += solarProd;
   player.bessEnergyMWh += bessProd;
 
   const totalProd = windProd + solarProd + bessProd;
+
   player.energyTodayMWh += totalProd;
   player.co2Tons += totalProd * 0.0003;
   player.points += Math.round(totalProd / 2);
@@ -1030,6 +1072,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
