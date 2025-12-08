@@ -181,22 +181,19 @@ function initGrid() {
 // =========================
 // OROGRAFÍA SENCILLA
 // =========================
-function initTerrain(tileX, tileY) {
-  // Para ahora usamos un ruido muy simple basado en la posición
-  const baseSeed = (tileX * 73856093) ^ (tileY * 19349663);
-  worldTerrainSeed = baseSeed;
+function initTerrain() {
   gridTerrain = [];
 
   for (let y = 0; y < GRID_SIZE; y++) {
     const row = [];
     for (let x = 0; x < GRID_SIZE; x++) {
-      const v = pseudoRandom2D(x, y, baseSeed);
-      let type = "flat";
-      if (v < 0.2) type = "valley";
-      else if (v < 0.7) type = "flat";
-      else if (v < 0.9) type = "hill";
-      else type = "mountain";
-      row.push({ type });
+      const r = Math.random();
+      let t;
+      if (r < 0.25) t = "valley";       // 25% valles
+      else if (r < 0.5) t = "flat";     // 25% llanos
+      else if (r < 0.75) t = "hill";    // 25% colinas
+      else t = "mountain";              // 25% montañas
+      row.push({ type: t });
     }
     gridTerrain.push(row);
   }
@@ -1007,6 +1004,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
