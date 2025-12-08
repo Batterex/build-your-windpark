@@ -423,6 +423,19 @@ function getCableConnections(x, y) {
   const dirs = { up: false, down: false, left: false, right: false };
   const candidates = ["cable", "substation", "turbine_3", "turbine_5", "solar"];
 
+  // ¿Hay alguna subestación actualmente sobrecargada?
+function isAnySubstationOverloaded() {
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = grid[y][x];
+      if (cell && cell.type === "substation" && cell.overloaded) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
   if (inBounds(x, y - 1)) {
     const c = grid[y - 1][x];
     if (c && candidates.includes(c.type)) dirs.up = true;
@@ -1004,6 +1017,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
