@@ -466,22 +466,24 @@ function drawGrid() {
 
 function drawTerrain(x, y) {
   if (!gridTerrain || !gridTerrain[y] || !gridTerrain[y][x]) return;
+
   const t = gridTerrain[y][x].type;
   const baseX = x * CELL_SIZE;
   const baseY = y * CELL_SIZE;
 
+  // Colores más fuertes para ver bien las zonas
   switch (t) {
     case "valley":
-      ctx.fillStyle = "rgba(22, 163, 74, 0.25)";   // verde más visible
+      ctx.fillStyle = "rgba(16, 185, 129, 0.35)";   // verde valle
       break;
     case "flat":
-      ctx.fillStyle = "rgba(30, 64, 175, 0.18)";   // azul suave
+      ctx.fillStyle = "rgba(37, 99, 235, 0.30)";    // azul llano
       break;
     case "hill":
-      ctx.fillStyle = "rgba(34, 197, 94, 0.30)";   // verde colinas
+      ctx.fillStyle = "rgba(34, 197, 94, 0.40)";    // verde colinas
       break;
     case "mountain":
-      ctx.fillStyle = "rgba(148, 163, 184, 0.35)"; // gris claro
+      ctx.fillStyle = "rgba(148, 163, 184, 0.55)";  // gris montaña
       break;
     default:
       return;
@@ -1005,6 +1007,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
