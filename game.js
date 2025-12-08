@@ -944,21 +944,20 @@ function updatePanels() {
     player.windEnergyMWh + player.solarEnergyMWh + player.bessEnergyMWh;
   const levelInfo = getLevelInfo(totalRE);
 
-  // ===== Cabecera superior =====
-  const windRESpan = document.getElementById("stat-wind-energy");
-  const solarRESpan = document.getElementById("stat-solar-energy");
-  const bessRESpan = document.getElementById("stat-bess-energy");
-  const totalRESpan = document.getElementById("stat-total-energy");
-  const timeSpan = document.getElementById("stat-time");
+  // ------- Barra superior -------
+  const headerWind = document.getElementById("header-wind");
+  const headerSolar = document.getElementById("header-solar");
+  const headerBess = document.getElementById("header-bess");
+  const headerTotal = document.getElementById("header-total");
+  const headerTime = document.getElementById("header-time");
 
-  if (windRESpan) windRESpan.textContent = player.windEnergyMWh.toFixed(1);
-  if (solarRESpan) solarRESpan.textContent = player.solarEnergyMWh.toFixed(1);
-  if (bessRESpan) bessRESpan.textContent = player.bessEnergyMWh.toFixed(1);
-  if (totalRESpan) totalRESpan.textContent = totalRE.toFixed(1);
-
-  if (timeSpan) {
+  if (headerWind) headerWind.textContent = player.windEnergyMWh.toFixed(1);
+  if (headerSolar) headerSolar.textContent = player.solarEnergyMWh.toFixed(1);
+  if (headerBess) headerBess.textContent = player.bessEnergyMWh.toFixed(1);
+  if (headerTotal) headerTotal.textContent = totalRE.toFixed(1);
+  if (headerTime) {
     const h = simHour.toString().padStart(2, "0");
-    timeSpan.textContent = `${h}:00`;
+    headerTime.textContent = `${h}:00`;
   }
 
   // ===== Park stats (panel intermedio) =====
@@ -1005,6 +1004,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
