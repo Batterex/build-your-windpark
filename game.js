@@ -638,23 +638,25 @@ function drawAsset(type, x, y) {
 
 // SUBESTACIÓN
 if (type === "substation") {
-  const isOverloaded = cell && cell.overloaded;
+  const totalMW = getTotalConnectedGenerationMW();
+  const capacityMW = getSubstationCapacityMW();
+  const overloaded = capacityMW > 0 && totalMW > capacityMW;
 
   ctx.fillStyle = "#0f172a";
-  ctx.strokeStyle = isOverloaded ? "#f97373" : "#fbbf24"; // rojo si sobrecargada
+  ctx.strokeStyle = overloaded ? "#f97373" : "#fbbf24"; // rojo si saturada
   ctx.lineWidth = 1.6;
   ctx.fillRect(cx - 7, cy - 5, 14, 10);
   ctx.strokeRect(cx - 7, cy - 5, 14, 10);
 
   // ventanitas
-  ctx.fillStyle = isOverloaded ? "#fecaca" : "#fbbf24";
+  ctx.fillStyle = overloaded ? "#fecaca" : "#fbbf24";
   ctx.globalAlpha = 0.45;
   ctx.fillRect(cx - 5, cy - 3, 4, 6);
   ctx.fillRect(cx + 1, cy - 3, 4, 6);
   ctx.globalAlpha = 1;
 
   // rayo
-  ctx.fillStyle = isOverloaded ? "#fecaca" : "#fbbf24";
+  ctx.fillStyle = overloaded ? "#fecaca" : "#fbbf24";
   ctx.beginPath();
   ctx.moveTo(cx, cy - 4);
   ctx.lineTo(cx - 2, cy + 1);
@@ -1131,6 +1133,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
