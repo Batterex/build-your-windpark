@@ -467,26 +467,27 @@ function drawGrid() {
 function drawTerrain(x, y) {
   if (!gridTerrain || !gridTerrain[y] || !gridTerrain[y][x]) return;
   const t = gridTerrain[y][x].type;
-  const cx = x * CELL_SIZE + CELL_SIZE / 2;
-  const cy = y * CELL_SIZE + CELL_SIZE / 2;
+  const baseX = x * CELL_SIZE;
+  const baseY = y * CELL_SIZE;
 
   switch (t) {
     case "valley":
-      ctx.fillStyle = "rgba(15,118,110,0.15)";
+      ctx.fillStyle = "rgba(22, 163, 74, 0.25)";   // verde más visible
       break;
     case "flat":
-      ctx.fillStyle = "rgba(30,64,175,0.1)";
+      ctx.fillStyle = "rgba(30, 64, 175, 0.18)";   // azul suave
       break;
     case "hill":
-      ctx.fillStyle = "rgba(21,128,61,0.15)";
+      ctx.fillStyle = "rgba(34, 197, 94, 0.30)";   // verde colinas
       break;
     case "mountain":
-      ctx.fillStyle = "rgba(148,163,184,0.2)";
+      ctx.fillStyle = "rgba(148, 163, 184, 0.35)"; // gris claro
       break;
     default:
       return;
   }
-  ctx.fillRect(cx - CELL_SIZE / 2, cy - CELL_SIZE / 2, CELL_SIZE, CELL_SIZE);
+
+  ctx.fillRect(baseX, baseY, CELL_SIZE, CELL_SIZE);
 }
 
 function drawAsset(type, x, y) {
@@ -1004,6 +1005,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
