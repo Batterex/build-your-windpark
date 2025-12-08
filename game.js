@@ -451,6 +451,42 @@ function hasNeighborConnection(x, y) {
   return false;
 }
 
+// =========================
+// CAPACIDAD Y MW CONECTADOS
+// =========================
+
+// MW de generación conectada (turbinas + solar)
+function getTotalConnectedGenerationMW() {
+  let total = 0;
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = grid[y][x];
+      if (!cell || !cell.connected) continue;
+
+      if (cell.type === "turbine_3") total += 3;
+      else if (cell.type === "turbine_5") total += 5;
+      else if (cell.type === "solar") total += 0.5; // 0,5 MW por celda solar
+    }
+  }
+  return total;
+}
+
+// Capacidad total de las subestaciones en MW (nº SUB × profile.substationMW)
+function getSubstationCapacityMW() {
+  let numSubs = 0;
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = grid[y][x];
+      if (cell && cell.type === "substation") {
+        numSubs++;
+      }
+    }
+  }
+  if (numSubs === 0) return 0;
+  const profile = ZONE_PROFILES[currentZone] || ZONE_PROFILES.desconocida;
+  return numSubs * profile.substationMW;
+}
+
 function getCableConnections(x, y) {
   const dirs = { up: false, down: false, left: false, right: false };
   const candidates = ["cable", "substation", "turbine_3", "turbine_5", "solar"];
@@ -1095,6 +1131,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
