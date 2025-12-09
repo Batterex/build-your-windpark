@@ -148,6 +148,10 @@ document.addEventListener("DOMContentLoaded", () => {
           if (grid[y][x].connected === undefined) grid[y][x].connected = false;
           if (grid[y][x].distToSub === undefined) grid[y][x].distToSub = null;
           if (grid[y][x].energized === undefined) grid[y][x].energized = false;
+                  // campos extra para BESS
+        if (grid[y][x].type === "bess_10") {
+          if (grid[y][x].bessCapacity === undefined) grid[y][x].bessCapacity = 10; // 10 MWh
+          if (grid[y][x].bessCharge === undefined) grid[y][x].bessCharge = 0;     // empieza descargada
         }
       }
     }
@@ -1195,6 +1199,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
