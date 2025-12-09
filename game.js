@@ -50,6 +50,8 @@ let grid = [];
 let selectedAsset = null;
 let energyPhase = 0; // para animar energía en cables
 let simHour = 6; // hora simulada
+let gridTerrain;
+let hasActiveBESSAtNight = false; // indica si algún BESS está aportando energía de noche
 
 // =========================
 // SISTEMA DE NIVELES
@@ -1193,6 +1195,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
