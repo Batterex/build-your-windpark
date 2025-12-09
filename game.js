@@ -687,19 +687,68 @@ if (type === "substation") {
 }
 
   // CABLE
-  if (type === "cable") {
-    const { up, down, left, right } = getCableConnections(x, y);
-    const half = CELL_SIZE / 2 - 1;
+if (type === "cable") {
+  const { up, down, left, right } = getCableConnections(x, y);
+  const half = CELL_SIZE / 2 - 1;
 
-    // base gris
-    ctx.strokeStyle = "#64748b";
-    ctx.lineWidth = 1.6;
+  // base del cable (gris por defecto)
+  ctx.strokeStyle = "#64748b";
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+
+  if (!up && !down && !left && !right) {
+    ctx.moveTo(cx - 2, cy);
+    ctx.lineTo(cx + 2, cy);
+  } else {
+    if (up) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx, cy - half);
+    }
+    if (down) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx, cy + half);
+    }
+    if (left) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx - half, cy);
+    }
+    if (right) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + half, cy);
+    }
+  }
+  ctx.stroke();
+
+  // nodo central
+  ctx.strokeStyle = "#475569";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 1.3, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // ==========================
+  // Efecto energía en el cable
+  // ==========================
+
+  // Obtenemos si es de día o noche leyendo simHour (variable global)
+  const isDayNow = simHour >= 6 && simHour < 19;
+
+  // Si no hay energía, nada más
+  if (!cell || !cell.energized) {
+    return;
+  }
+
+  // De noche: cable "apagado" → rojo oscuro, sin animación
+  if (!isDayNow) {
+    ctx.save();
+    ctx.strokeStyle = "#7f1d1d"; // rojo oscuro
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]); // sin guiones
+
     ctx.beginPath();
-
     if (!up && !down && !left && !right) {
       ctx.moveTo(cx - 2, cy);
       ctx.lineTo(cx + 2, cy);
-      ctx.stroke();
     } else {
       if (up) {
         ctx.moveTo(cx, cy);
@@ -717,53 +766,47 @@ if (type === "substation") {
         ctx.moveTo(cx, cy);
         ctx.lineTo(cx + half, cy);
       }
-      ctx.stroke();
     }
-
-    // nodo central
-    ctx.strokeStyle = "#475569";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 1.3, 0, Math.PI * 2);
     ctx.stroke();
-
-    // energía verde
-    if (cell && cell.energized) {
-      ctx.save();
-      ctx.strokeStyle = "#22c55e";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([4, 4]);
-      ctx.lineDashOffset = -energyPhase * 4;
-
-      ctx.beginPath();
-      if (!up && !down && !left && !right) {
-        ctx.moveTo(cx - 2, cy);
-        ctx.lineTo(cx + 2, cy);
-      } else {
-        if (up) {
-          ctx.moveTo(cx, cy);
-          ctx.lineTo(cx, cy - half);
-        }
-        if (down) {
-          ctx.moveTo(cx, cy);
-          ctx.lineTo(cx, cy + half);
-        }
-        if (left) {
-          ctx.moveTo(cx, cy);
-          ctx.lineTo(cx - half, cy);
-        }
-        if (right) {
-          ctx.moveTo(cx, cy);
-          ctx.lineTo(cx + half, cy);
-        }
-      }
-      ctx.stroke();
-      ctx.restore();
-    }
-
+    ctx.restore();
     return;
   }
 
+  // De día: líquido verde como hasta ahora
+  ctx.save();
+  ctx.strokeStyle = "#22c55e"; // verde fosforito
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.lineDashOffset = -energyPhase * 4;
+
+  ctx.beginPath();
+  if (!up && !down && !left && !right) {
+    ctx.moveTo(cx - 2, cy);
+    ctx.lineTo(cx + 2, cy);
+  } else {
+    if (up) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx, cy - half);
+    }
+    if (down) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx, cy + half);
+    }
+    if (left) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx - half, cy);
+    }
+    if (right) {
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + half, cy);
+    }
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  return;
+}
+  
   // MET MAST
   if (type === "metmast") {
     ctx.strokeStyle = "#a855f7";
@@ -1150,6 +1193,7 @@ function updatePanels() {
       `Zona: ${zoneText} – ${zoneBonus} | Level bonus: ${levelInfo.bonusDesc}`;
   }
 }
+
 
 
 
